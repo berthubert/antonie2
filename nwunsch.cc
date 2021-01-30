@@ -2,7 +2,7 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
-
+#include <fstream>
 using std::min;
 using std::swap;
 using std::cout;
@@ -101,7 +101,7 @@ int main(int argc, char**argv)
   }
 
   std::string aout, bout, summary;
-  auto ret=stringalign(argv[1], argv[2], 1, 2, 0, aout, bout, summary);
+  auto ret=stringalign(argv[1], argv[2], 1, 2, 0.5, aout, bout, summary);
   printf("A: %s\nB: %s\na: %s\nb: %s\nd: %s\n",
 	 argv[1], argv[2],
 	 aout.c_str(), bout.c_str(), summary.c_str());
@@ -111,4 +111,20 @@ int main(int argc, char**argv)
   cout<<"Inserts: "<<ret.inserts<<endl;
   cout<<"Deletes: "<<ret.deletes<<endl;
   cout<<"Matches: "<<ret.matches<<endl;
+
+  std::ofstream csv("diff.csv");
+  csv <<"pos a b d x"<<endl;
+  for(unsigned int n=0; n < summary.size(); ++n) {
+    csv<<n<<" '"<<aout[n]<<"' '"<<bout[n]<<"' '"<<summary[n]<<"' ";
+    csv << (summary[n]=='=' ? 0 : 1) << '\n';
+  }
+  
+  for(unsigned int n=0; n < summary.size(); n+= 80) {
+    cout << "a: "<<aout.substr(n, 80)  << endl;
+    cout << "b: "<<bout.substr(n, 80)  << endl;    
+    cout << "d: "<<summary.substr(n, 80)  << endl;
+    
+    cout <<endl;
+  }
+  
 }

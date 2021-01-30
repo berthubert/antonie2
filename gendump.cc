@@ -24,15 +24,24 @@ int main(int argc, char **argv)
   ReferenceGenome rg(argv[1]);
   auto gene = rg.getChromosome(argv[2])->chromosome.getRange(atoi(argv[3]), atoi(argv[4]) - atoi(argv[3]));
 
-  cout<<gene<<endl;
+  cout<<"DNA"<<endl;
+  for(size_t pos = 0; pos < gene.size(); ++pos) {
+    cout<<gene[pos];
+    if((pos%3)==2)
+      cout<<' ';
+  }
+  cout<<endl;
+  cout<<"DNA reverse complement"<<endl;
   cout<<gene.getRC()<<endl;
 
   for(int o=0; o < 3; ++o) {
+    cout<<"Offset "<<o<<endl;
     auto str = gene.toASCII();
     for(unsigned int n=o; n < str.size() ; n+=3) {
-      cout<<DNAToAminoAcid(str.c_str()+n);
+      cout<<" "<<DNAToAminoAcid(str.c_str()+n)<<"  ";
     }
     cout<<endl;
+    cout<<"Offset "<<o<<", reverse complement"<<endl;
     str = gene.getRC().toASCII();
     for(unsigned int n=o; n < str.size() ; n+=3) {
       cout<<DNAToAminoAcid(str.c_str()+n);

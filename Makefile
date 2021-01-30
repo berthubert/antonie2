@@ -1,13 +1,13 @@
 -include sysdeps/$(shell uname).inc
 
 VERSION=0.1
-CXXFLAGS?=-Wall -O3 -fPIC -I/usr/include/python3.6m -ggdb -I. -Iext -Iext/libmba  -MMD -MP -pthread  $(CXX2014FLAGS) -Wno-strict-aliasing # -Wno-unused-local-typedefs 
+CXXFLAGS?=-Wall -O3 -fPIC -I/usr/include/python3.6m -ggdb -I. -Iext -Iext/libmba  -MMD -MP -pthread  $(CXX2014FLAGS) -Wno-strict-aliasing -Iext/nr_c304/code -fconcepts -Wno-reorder # -Wno-unused-local-typedefs 
 CFLAGS=-Wall -I. -Iext/libmba -O3 -MMD -MP
 LDFLAGS=$(CXX2014FLAGS) -pthread  # -Wl,-Bstatic -lstdc++ -lgcc -lz -Wl,-Bdynamic -static-libgcc -lm -lc
 CHEAT_ARG := $(shell ./update-git-hash-if-necessary)
 
 SHIPPROGRAMS=antonie 16ssearcher stitcher  fqgrep pfqgrep genex
-PROGRAMS=$(SHIPPROGRAMS) digisplice gffedit gfflookup nwunsch fogsaa gtfreader
+PROGRAMS=$(SHIPPROGRAMS) digisplice gffedit gfflookup nwunsch fogsaa gtfreader cor2 correlo gcstats skfit gcscan
 
 ifeq ($(CC),clang)
         CXXFLAGS+=-ftemplate-depth=1000
@@ -63,6 +63,21 @@ genex: genex.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -o $@
 
 correlo: correlo.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+gcstats: gcstats.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+gcscan: gcscan.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+
+
+skfit: skfit.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+
+cor2: cor2.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
 
 
@@ -123,5 +138,5 @@ antonie.exe:
 check: testrunner
 	./testrunner
 
-testrunner: test-misc_hh.o test-nucstore_cc.o test-dnamisc_cc.o test-saminfra_cc.o testrunner.o misc.o dnamisc.o saminfra.o zstuff.o fastq.o hash.o nucstore.o
+testrunner: test-misc_hh.o test-nucstore_cc.o test-dnamisc_cc.o test-saminfra_cc.o testrunner.o misc.o dnamisc.o saminfra.o zstuff.o fastq.o hash.o nucstore.o taxoreader.o test-taxoreader_cc.o
 	$(CXX) $^ -lboost_unit_test_framework -lz -o $@ 

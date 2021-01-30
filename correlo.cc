@@ -187,14 +187,16 @@ struct Matrix
   
 };
 
-
-
-set<NucleotideStore> getUniNucs(const ReferenceGenome& rg, uint32_t start, uint32_t len)
+set<NucleotideStore> getUniNucs(const ReferenceGenome::Chromosome& chromo, uint32_t start, uint32_t len)
 {
   set<NucleotideStore> ret;
   for(uint32_t pos = start ; pos < start + len; ++pos) {
     try {
-      ret.insert(rg.getRange(pos, g_unitsize));
+      auto r = chromo.chromosome.getRange(pos, g_unitsize);
+      if(!r.isCanonical())
+        ret.insert(r.getRC());
+      else
+        ret.insert(r);
     }
     catch(std::exception& e) {
       cerr<<e.what()<<endl;
@@ -203,58 +205,97 @@ set<NucleotideStore> getUniNucs(const ReferenceGenome& rg, uint32_t start, uint3
   return ret;
 }
 
-void doKMERMap(const ReferenceGenome& rg)
+template<class InputIt1, class InputIt2>
+size_t set_intersection_size(InputIt1 first1, InputIt1 last1,
+                               InputIt2 first2, InputIt2 last2)
+{
+  size_t count = 0;
+  while (first1 != last1 && first2 != last2) {
+    if (*first1 < *first2) {
+      ++first1;
+    } else  {
+      if (!(*first2 < *first1)) {
+        ++count;
+        *first1++;
+      }
+      ++first2;
+    }
+  }
+  return count;
+}
+
+
+void doKMERMap(const ReferenceGenome& rg1, const std::string& name1, const ReferenceGenome& rg2, const std::string& name2)
 {
   struct Count
   {
     uint32_t xnucs{0}, ynucs{0}, overnucs{0};
   };
-  Matrix<Count, 4000, 4000> m;
+  constexpr int numchunks=1000;
+  Matrix<Count, numchunks, numchunks> m;
 
-  auto numnucs= rg.numNucleotides();
+  auto chromo1 = rg1.getChromosome(name1);
+  auto chromo2 = rg2.getChromosome(name2);
+  
+  auto numnucs1 = chromo1->chromosome.size();
+  auto numnucs2 = chromo2->chromosome.size();
 
-  unsigned int chunksize = rg.numNucleotides()/4000;
-  unsigned int numchunks = 400; // numnucs/chunksize - 1; // we have some edge cases
+  unsigned int chunksize = std::max(chromo1->chromosome.size(), chromo2->chromosome.size())/numchunks;
+  auto numchunks1 = numnucs1/chunksize;
+  auto numchunks2 = numnucs2/chunksize;
+  // 1 goes on the x-axis
+  vector<set<NucleotideStore>> xvector, yvector;
+  xvector.resize(numnucs1/chunksize);
+  yvector.resize(numnucs2/chunksize);
 
-  cout<<"Chunksize: "<<chunksize<<" nucleotides, "<<endl;
-  vector<set<NucleotideStore>> xvector;
-  xvector.resize(numchunks);
-
+  cout<<numnucs1<<" " <<numnucs2 <<endl;
+  cout<<xvector.size()<<" "<<yvector.size()<<endl;
    
-  atomic<uint32_t> sofar{0};
-  auto f=[&sofar,&rg,&numchunks,&chunksize, &xvector]() {
-    for(uint32_t chunk = sofar++ ; chunk < numchunks; chunk = sofar++) {
-      cout<<chunk<<endl;
-      xvector[chunk]=getUniNucs(rg, chunk*chunksize, chunksize);
+  atomic<uint32_t> sofar1{0}, sofar2{0};
+  auto f1 = [&sofar1, &rg1, &chromo1, &numchunks1, &chunksize, &xvector]() {
+    for(uint32_t chunk = sofar1++ ; chunk < numchunks1; chunk = sofar1++) {
+      xvector[chunk]=getUniNucs(*chromo1, chunk*chunksize, chunksize);
+      cout<<"1: "<<chunk<<" / " <<numchunks1<<" -> " <<xvector[chunk].size() << endl;
     }
   };
-  
+  auto f2 = [&sofar2, &rg2, &chromo2, &numchunks2, &chunksize, &yvector]() {
+    for(uint32_t chunk = sofar2++ ; chunk < numchunks2; chunk = sofar2++) {
+      yvector[chunk]=getUniNucs(*chromo2, chunk*chunksize, chunksize);
+      cout<<"2: "<<chunk<<" / " <<numchunks2<<" -> " <<yvector[chunk].size() << endl;
+    }
+  };
+
   vector<std::thread> running;
-  for(int n=0; n < 8; ++n)
-    running.emplace_back(f);
+  for(int n=0; n < 4; ++n) {
+    running.emplace_back(f1);
+    running.emplace_back(f2);
+  }
   
-  for(auto& r : running)
+  for(auto& r : running) {
     r.join();
-
+    cout<<"Thread done"<<endl;
+  }
+  
   running.clear();
-  sofar=0;
+  sofar1=0;
 
-  auto f2=[&sofar,&rg,&numchunks,&chunksize, &xvector, &m]() {
-    for(uint32_t xchunk = sofar++ ; xchunk < numchunks; xchunk = sofar++) {
+  
+  auto f3=[&sofar1, &numchunks1, &numchunks2, &chunksize, &xvector, &yvector, &m]() {
+    
+    
+    for(uint32_t xchunk = sofar1++ ; xchunk < numchunks1; xchunk = sofar1++) {
       cout<<xchunk<<endl;
-      for(uint32_t ychunk = 0; ychunk < numchunks; ++ychunk) {
-        vector<NucleotideStore> inter;
-        set_intersection(xvector[xchunk].begin(), xvector[xchunk].end(), xvector[ychunk].begin(), xvector[ychunk].end(), back_inserter(inter));
-
-        m(xchunk, ychunk)={xvector[xchunk].size(), xvector[ychunk].size(), inter.size()};
+      for(uint32_t ychunk = 0; ychunk < numchunks2; ++ychunk) {
+        auto c = set_intersection_size(xvector[xchunk].begin(), xvector[xchunk].end(), yvector[ychunk].begin(), yvector[ychunk].end());
+        m(xchunk, ychunk)={xvector[xchunk].size(), yvector[ychunk].size(), c};
       }
     }
   };
   for(int n=0; n < 8; ++n)
-    running.emplace_back(f2);
+    running.emplace_back(f3);
   
-  while(sofar < numchunks) {
-    cout<<sofar<<endl;
+  while(sofar1 < numchunks1) {
+    cout<<sofar1<<endl;
     sleep(30);
     ofstream plot("plot");
     for(size_t x=0; x <= m.maxX(); ++x)
@@ -262,6 +303,18 @@ void doKMERMap(const ReferenceGenome& rg)
         auto res=m(x,y);
         plot<<x<<"\t"<<y<<"\t"<<res.xnucs<<"\t" << res.ynucs<<"\t"<<res.overnucs<<"\n";
       }
+  }
+  for(auto& r : running) {
+    r.join();
+    cout<<"Thread done"<<endl;
+  }
+
+  ofstream plot("plot");
+  for(size_t x=0; x <= m.maxX(); ++x) {
+    for(size_t y=0; y <= m.maxY(); ++y) {
+      auto res=m(x,y);
+      plot<<x<<"\t"<<y<<"\t"<<res.xnucs<<"\t" << res.ynucs<<"\t"<<res.overnucs<<"\n";
+    }
   }
 }
 
@@ -362,20 +415,32 @@ int main(int argc, char**argv)
     cerr<<"Syntax: genex reference.fasta"<<endl;
     return EXIT_FAILURE;
   }
-  ReferenceGenome rg(argv[1]); //, indexChr);
+  
+  ReferenceGenome rg1(argv[1]);
+  string chromo1(argv[2]);
+  cout<<"Done reading genome1, have "<<rg1.numChromosomes()<<" chromosomes, "<<
+    rg1.numNucleotides()<<" nucleotides"<<endl;
 
+  
+  ReferenceGenome rg2(argv[3]);
+  string chromo2(argv[4]);
+
+  cout<<"Done reading genome 2, have "<<rg2.numChromosomes()<<" chromosomes, "<<
+    rg2.numNucleotides()<<" nucleotides"<<endl;
+
+  
+  /*
   for(const auto& a: rg.getAllChromosomes()) {
     ofstream of(a.first);
     cout<<a.first<<" " <<a.second.fullname<< " "<<a.second.chromosome.getString().size()<<endl;
     of<<a.second.chromosome.getString();
   }
   return 0;
+  */
   
-  cout<<"Done reading genome, have "<<rg.numChromosomes()<<" chromosomes, "<<
-    rg.numNucleotides()<<" nucleotides"<<endl;
 
   // doCompressMap(rg);
-  doKMERMap(rg);
+  doKMERMap(rg1, chromo1, rg2, chromo2);
   
 }
 

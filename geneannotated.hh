@@ -51,6 +51,7 @@ public:
     return ret;
   }
 
+  int32_t d_taxonID{-1};
 private:
   typedef IntervalTree<unsigned int, GeneAnnotation> gas_t;
   void parseGenBank(const std::string& fname);

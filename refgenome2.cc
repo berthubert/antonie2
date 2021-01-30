@@ -25,7 +25,7 @@ ReferenceGenome::ReferenceGenome(const boost::string_ref& fname, std::function<v
 {
   FILE* fp = fopen(d_fname.c_str(), "rb");
   if(!fp)
-    throw runtime_error("Unable to open reference genome file '"+d_fname+"'");
+    throw runtime_error("Unable to open reference genome file '"+d_fname+"': "+string(strerror(errno)));
 
   
   char line[256]="";

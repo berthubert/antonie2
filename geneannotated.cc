@@ -36,6 +36,8 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
       continue;
     }
     const char* p=strtok((char*)line.c_str(), "\t\n");
+    if(!p)
+      continue;
     int field=0;
     string attributeStr;
     do {
@@ -77,6 +79,13 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
     }
     ga.tag.clear();
     
+
+    if(ga.type=="region" && attributes.count("Dbxref")) {
+      const auto& v = attributes["Dbxref"];
+      if(v.find("taxon:")==0) {
+	d_taxonID = atoi(v.c_str() + 6);
+      }
+    }
     
     for(const auto& val : attributes) {
       if(val.first=="Note" || val.first=="Name" || val.first=="Product" || val.first=="product") {
@@ -102,6 +111,7 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
     gas[ga.chromosome].push_back(Interval<unsigned int, GeneAnnotation>(ga.startPos, ga.stopPos, ga));
   no:;
   }
+  fclose(fp);
   for(const auto& ga : gas) {
     vector<Interval<unsigned int, GeneAnnotation>> vec = ga.second;
     IntervalTree<unsigned int, GeneAnnotation> tree(std::move(vec));
@@ -144,6 +154,8 @@ vector<GeneAnnotation> GeneAnnotationReader::lookup(string_view chromo, uint64_t
 
 void GeneAnnotationReader::parseGenBank(const std::string& fname)
 {
+  abort();
+
   FILE* fp=fopen(fname.c_str(), "rb");
   if(!fp)
     throw runtime_error("Unable to open '"+fname+"' for gene annotation reading");

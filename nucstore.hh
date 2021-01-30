@@ -74,6 +74,13 @@ public:
   
   static char getVal(char c);
   std::string getString() const { return d_storage; }
+  uint32_t getUInt32() const {
+    if(size() != 16)
+      throw std::runtime_error("GetUInt32 only works on 16 nucleotides");
+    uint32_t ret;
+    memcpy(&ret, d_storage.c_str(), 4);
+    return ret;
+  }
   void setString(const std::string& str) { d_storage = str; }
   std::string toASCII() const;
 private:
