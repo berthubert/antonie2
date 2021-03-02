@@ -124,17 +124,6 @@ size_t NucleotideStore::fuzOverlap(const NucleotideStore& rhs, int ratio) const
   return pos;
 }
 
-char NucleotideStore::get(size_t pos) const
-{
-  uint8_t byte;
-  if(pos/4 < d_storage.size())
-    byte=d_storage.at(pos/4);
-  else
-    byte=d_curval;
-
-  byte >>= ((pos%4)*2);
-  return "ACGT"[byte & 0x3];
-}
 
 bool getBit(uint8_t c, uint8_t bit)
 {
@@ -180,34 +169,6 @@ void NucleotideStore::append(const boost::string_ref& line)
     append(c);
 }
 
-char NucleotideStore::getVal(char c)
-{
-  switch(c) {
-  case 0:
-  case 'A':
-  case 'a':
-    return 0;
-
-    
-  case 1:
-  case 'C':
-  case 'c':
-    return 1;
-    
-  case 2:
-  case 'G':
-  case 'g':
-    return 2;
-    
-  case 3:
-  case 'T':
-  case 't':
-    return 3;
-  default:
-    return 0;
-  }
-  throw std::runtime_error("Impossible nucleotide: "+std::string(1, c));
-}
 
 void NucleotideStore::append(char c)
 {

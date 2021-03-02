@@ -5,7 +5,7 @@
 
 BOOST_AUTO_TEST_SUITE(nucstore_hh)
 
-BOOST_AUTO_TEST_CASE(test_nucstore) {
+BOOST_AUTO_TEST_CASE(test_nucstore_basic) {
   NucleotideStore ns;
   ns.append('A');
   BOOST_CHECK_EQUAL(ns.get(0),'A');
@@ -44,11 +44,63 @@ BOOST_AUTO_TEST_CASE(test_nucstore) {
 
   sep.set(4, 'C');
   BOOST_CHECK_EQUAL(sep.get(0), 'C');
+}
+
+BOOST_AUTO_TEST_CASE(test_nucstore_val) {
+  NucleotideStore a("ACGTTC");
+  BOOST_CHECK_EQUAL(a.get(0), 'A');
+  BOOST_CHECK_EQUAL(a.getNum(0), 0);
+  BOOST_CHECK_EQUAL(a.getNum(3), 3);
+  BOOST_CHECK_EQUAL(a.getNum(4), 3);
+  BOOST_CHECK_EQUAL(a.getNum(5), 1);
+  
+}
+
+BOOST_AUTO_TEST_CASE(test_nucstore_comp) {
+  using namespace std;
+  NucleotideStore a("AAA"), b("AA");
+  BOOST_CHECK_LT(b, a);
+
+  BOOST_CHECK_LT(NucleotideStore("A"), NucleotideStore("C"));
+  BOOST_CHECK_LT(NucleotideStore("C"), NucleotideStore("G"));
+  BOOST_CHECK_LT(NucleotideStore("G"), NucleotideStore("T"));
+  
+  BOOST_CHECK_LT(NucleotideStore("A"), NucleotideStore("C"));
+  BOOST_CHECK_LT(NucleotideStore("AA"), NucleotideStore("CC"));
+  BOOST_CHECK_LT(NucleotideStore("AAA"), NucleotideStore("CCC"));
+  BOOST_CHECK_LT(NucleotideStore("AAAA"), NucleotideStore("CCCC"));
+  BOOST_CHECK_LT(NucleotideStore("AAAAA"), NucleotideStore("CCCCC"));
+  BOOST_CHECK_LT(NucleotideStore("AAAAC"),
+		 NucleotideStore("AAAAG"));
+
+  BOOST_CHECK_LT(NucleotideStore("AAAAC"),
+		 NucleotideStore("AAAACC"));
+
+  BOOST_CHECK_LT(NucleotideStore("AAAAC"),
+		 NucleotideStore("AAAACG"));
+
+  BOOST_CHECK_LT(NucleotideStore("AAAAC"),
+		 NucleotideStore("AAAACCG"));
+
+  BOOST_CHECK_LT(NucleotideStore("AAAACC"),
+		 NucleotideStore("AAAACCG"));
+
+  BOOST_CHECK_LT(NucleotideStore("AAAACCC"),
+		 NucleotideStore("AAAACCG"));
+
+  
+  BOOST_CHECK_LT(NucleotideStore("AAAAA"),
+		 NucleotideStore("TAAAA"));
+
+  BOOST_CHECK_LT(NucleotideStore("AAAACCCCG"),
+		 NucleotideStore("AAAACCCCT"));
+
+  BOOST_CHECK_LT(NucleotideStore("AACC"),
+		 NucleotideStore("AAGG"));
 
   
   
 }
-
 
 BOOST_AUTO_TEST_CASE(test_delta) {
   using namespace std;
