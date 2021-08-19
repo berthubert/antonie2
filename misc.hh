@@ -2,12 +2,14 @@
 #include <stdio.h>
 #include <string>
 #include <stdint.h>
+#include <zlib.h>
 
 void chomp(char* line);
 char* sfgets(char* p, int num, FILE* fp);
 void reverseNucleotides(std::string* nucleotides);
 uint64_t filesize(const char* name);
 bool stringfgets(FILE* fp, std::string* line);
+bool stringfgets(gzFile fp, std::string* line);
 
 /** Rapid estimator of variance and mean of a series of doubles. 
     API compatible with a, sadly, far slower boost::accumulator_set

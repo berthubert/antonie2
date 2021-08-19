@@ -22,6 +22,21 @@ bool stringfgets(FILE* fp, std::string* line)
   return true;
 }
 
+//! read a line of text from a gzfile to a std::string, returns false on 'no data'
+bool stringfgets(gzFile fp, std::string* line)
+{
+  char buffer[1024];   
+  line->clear();
+  
+  do {
+    if(!gzgets(fp, buffer, sizeof(buffer)))
+      return !line->empty();
+    
+    line->append(buffer);
+  } while(!strchr(buffer, '\n'));
+  return true;
+}
+
 
 uint64_t filesize(const char* name)
 {
