@@ -14,6 +14,7 @@
 #include <mutex>
 #include <fstream>
 #include <boost/container/small_vector.hpp>
+#include <boost/algorithm/string.hpp>
 #include <future>
 #include <sstream>
 #include <sys/prctl.h>
@@ -28,8 +29,7 @@ using namespace std;
  *
  * The GFF is used to determine the codon position, or if we are in a gene or not
  *
- * The GFF has a link to a species ID and it would be super nice if we could get data from there
- * "species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=869304" - this is html though
+ * Also reads taxonomies from a fixed location, /home/ahu/git/antonie/taxonomy/new/fullnamelineage.dmp (sorry)
  *
  * This code ignores chromosomes smaller than 1 million bp, which mostly rids us of confusing plasmids, viruses etc
  */
@@ -51,21 +51,23 @@ int main(int argc, char**argv)
   skplot<<endl;
 
 
-  cout<<"Reading taxonomies..";
+  string taxofname="/home/ahu/git/antonie/taxonomy/new/fullnamelineage.dmp";
+  cout<<"Reading taxonomies from "<<taxofname<<"... ";
   cout.flush();
-  TaxoReader tr("/home/ahu/git/antonie/taxonomy/new/fullnamelineage.dmp");
+  TaxoReader tr(taxofname);
   cout<<" got "<<tr.size()<<" entries"<<endl;
   
   for(int n=1; n < argc; ++n) {
     try {
     ReferenceGenome rg(argv[n]);
-    string garname = argv[n];
-    garname.replace(garname.size()-3, 3, "gff");
   
     
     cout<<"Done reading genome from "<<argv[n]<<", have "<<rg.numChromosomes()<<" chromosomes, "<<
       rg.numNucleotides()<<" nucleotides"<<endl;
-    
+
+    string garname = argv[n];
+    boost::replace_all(garname, ".fna", ".gff");
+
     GeneAnnotationReader gar(garname);
     cout<<"Done with annotations from "<<garname<<" (taxid "<<gar.d_taxonID<<"), got "<<gar.size()<<" of them, for "<<gar.getChromosomes().size()<<" chromosomes: ";
 
