@@ -3,6 +3,7 @@
 #include <thread>
 #include <iostream>
 #include "misc.hh"
+#include <zlib.h>
 
 using namespace std;
 
@@ -23,7 +24,7 @@ NucleotideStore ReferenceGenome::getRange(uint32_t offset, uint32_t len) const
 
 ReferenceGenome::ReferenceGenome(const boost::string_ref& fname, std::function<void(ReferenceGenome::Chromosome*, std::string)> idx) : d_fname(fname)
 {
-  FILE* fp = fopen(d_fname.c_str(), "rb");
+  gzFile fp = gzopen(d_fname.c_str(), "rb");
   if(!fp)
     throw runtime_error("Unable to open reference genome file '"+d_fname+"': "+string(strerror(errno)));
 
@@ -35,7 +36,7 @@ ReferenceGenome::ReferenceGenome(const boost::string_ref& fname, std::function<v
   vector<std::thread> running;
   uint32_t seenSoFar=0;
 
-  while(fgets(line, sizeof(line), fp)) {
+  while(gzgets(fp, line, sizeof(line))) {
     chomp(line);
 
     if(line[0] == '>') {
@@ -74,7 +75,7 @@ ReferenceGenome::ReferenceGenome(const boost::string_ref& fname, std::function<v
     running.emplace_back(idx, chromosome, name);
   }
 
-  fclose(fp);
+  gzclose(fp);
 
   for(const auto& c : d_genome) {
     d_lookup.push_back(&c.second);
