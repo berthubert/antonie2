@@ -9,6 +9,7 @@
 #include <map>
 #include "misc.hh"
 #include <boost/algorithm/string.hpp>
+#include <zlib.h>
 using namespace std;
 
 
@@ -19,11 +20,11 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
   if(fname.empty())
     return;
 
-  if(!boost::ends_with(fname, ".gff") && !boost::ends_with(fname, ".gff3")) {
+  if(!boost::ends_with(fname, ".gff") && !boost::ends_with(fname, ".gff.gz") && !boost::ends_with(fname, ".gff3")) {
     parseGenBank(fname);
     return;
   }
-  FILE* fp=fopen(fname.c_str(), "rb");
+  gzFile fp=gzopen(fname.c_str(), "rb");
   if(!fp)
     throw runtime_error("Unable to open '"+fname+"' for gene annotation reading");
 
@@ -111,7 +112,7 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
     gas[ga.chromosome].push_back(Interval<unsigned int, GeneAnnotation>(ga.startPos, ga.stopPos, ga));
   no:;
   }
-  fclose(fp);
+  gzclose(fp);
   for(const auto& ga : gas) {
     vector<Interval<unsigned int, GeneAnnotation>> vec = ga.second;
     IntervalTree<unsigned int, GeneAnnotation> tree(std::move(vec));
@@ -154,7 +155,7 @@ vector<GeneAnnotation> GeneAnnotationReader::lookup(string_view chromo, uint64_t
 
 void GeneAnnotationReader::parseGenBank(const std::string& fname)
 {
-  abort();
+  throw std::runtime_error("The genbank parser you tried to call is non-functional");
 
   FILE* fp=fopen(fname.c_str(), "rb");
   if(!fp)
