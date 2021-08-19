@@ -7,7 +7,8 @@ LDFLAGS=$(CXX2014FLAGS) -pthread  # -Wl,-Bstatic -lstdc++ -lgcc -lz -Wl,-Bdynami
 CHEAT_ARG := $(shell ./update-git-hash-if-necessary)
 
 SHIPPROGRAMS=antonie 16ssearcher stitcher  fqgrep pfqgrep genex
-PROGRAMS=$(SHIPPROGRAMS) digisplice gffedit gfflookup nwunsch fogsaa gtfreader cor2 correlo gcstats skfit gcscan chagstats genehisto charsample
+PROGRAMS=$(SHIPPROGRAMS) digisplice gffedit gfflookup nwunsch fogsaa gtfreader cor2 correlo gcstats skfit gcscan chagstats genehisto\
+	charsample chromopic
 
 ifeq ($(CC),clang)
         CXXFLAGS+=-ftemplate-depth=1000
@@ -73,6 +74,11 @@ chagstats: chagstats.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o 
 
 genehisto: genehisto.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+
+chromopic: chromopic.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
 
 charsample: charsample.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@

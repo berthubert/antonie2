@@ -44,7 +44,7 @@ int main(int argc, char**argv)
   ofstream genomescsv("genomes.csv");
   genomescsv<<"name;fullname;acount;ccount;gcount;tcount;realm1;realm2;realm3;realm4;realm5\n";
   ofstream skplot("skplot.csv");
-  skplot<<"name,relpos,abspos,gcskew,taskew,gcskew0,gcskew1,gcskew2,gcskewNG,taskew0,taskew1,taskew2,taskewNG,pospos,gccount";
+  skplot<<"name,relpos,abspos,gcskew,taskew,gcskew0,gcskew1,gcskew2,gcskewNG,taskew0,taskew1,taskew2,taskewNG,pospos,gccount,ngcount";
   for(int cpos = 0 ; cpos < 4 ; ++cpos) {
     skplot << ",acounts"<<cpos<<",ccounts"<<cpos<<",gcounts"<<cpos<<",tcounts"<<cpos;
   }
@@ -108,7 +108,7 @@ int main(int argc, char**argv)
       double gcskews[4] = {0,0,0,0};
       double taskews[4] = {0,0,0,0};
       int acounts[4]={}, ccounts[4]={}, gcounts[4]={}, tcounts[4]={};
-      
+      int ngcount=0; // positions not in a gene
       GeneAnnotation last;
       last.gene=false;
       unsigned int gccount=0;
@@ -156,6 +156,8 @@ int main(int argc, char**argv)
 	    pospos--;
 	  }
 	}
+	else
+	  ngcount++;
 	    
 	char n = chr.get(s);
 	if(n=='G') {
@@ -188,7 +190,7 @@ int main(int argc, char**argv)
 	}
 	
 	if(!(s%4096) || s == chr.size() -1 ) {
-	  skplot<<c.first<<","<<1.0*s/chr.size()<<","<<s<<","<<gcskew<<","<<taskew<<","<<gcskews[0]<<","<<gcskews[1]<<","<<gcskews[2]<<"," <<gcskews[3]<<","<<taskews[0]<<","<<taskews[1]<<","<<taskews[2]<<"," <<taskews[3]<<","<<pospos<<","<<gccount;
+	  skplot<<c.first<<","<<1.0*s/chr.size()<<","<<s<<","<<gcskew<<","<<taskew<<","<<gcskews[0]<<","<<gcskews[1]<<","<<gcskews[2]<<"," <<gcskews[3]<<","<<taskews[0]<<","<<taskews[1]<<","<<taskews[2]<<"," <<taskews[3]<<","<<pospos<<","<<gccount<<","<<ngcount;
 	  for(int cpos = 0 ; cpos < 4 ; ++cpos) {
 	    skplot << "," << acounts[cpos]<<","<<ccounts[cpos]<<","<<gcounts[cpos]<<","<<tcounts[cpos];
 	  }

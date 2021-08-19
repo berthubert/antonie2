@@ -52,7 +52,7 @@ void doDump(const auto& g)
 			    "gc0skew", "predgc0skew",
 			    "gc1skew", "predgc1skew",
 			    "gc2skew", "predgc2skew",
-			    "gcNGskew", "predgcNGskew"
+			    "gcNGskew", "predgcNGskew", "predleading"
     });
   for(auto& skp : g.second) {
     writer << make_tuple(skp.pos,
@@ -62,7 +62,7 @@ void doDump(const auto& g)
 			 skp.gc0.skew, skp.gc0.predskew,
 			 skp.gc1.skew, skp.gc1.predskew,
 			 skp.gc2.skew, skp.gc2.predskew,
-			 skp.gcNG.skew, skp.gcNG.predskew
+			 skp.gcNG.skew, skp.gcNG.predskew, skp.predleading
 			 );
   }
 }
@@ -82,7 +82,8 @@ struct SKPos
 {
   int pos;
   int gccount;
-  int acounts2, ccounts2, gcounts2, tcounts2;  
+  int acounts2, ccounts2, gcounts2, tcounts2;
+
   struct SkewDeets
   {
     double skew;
@@ -91,7 +92,7 @@ struct SKPos
     gc0, gc1, gc2,
     ta0, ta1, ta2,
     gcNG, taNG;
-
+  bool predleading;
 };
 
 /* 
@@ -169,9 +170,11 @@ BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKP
 		    
 		    if(rpos < half) {
 		      getter(skp).predskew = -downshift + alpha * rpos;
+                      skp.predleading=true;
 		    }
 		    else { // straight up until we hit half
 		      getter(skp).predskew = -downshift + alpha * half - (rpos - half)*alpha;
+                      skp.predleading=false;
 		    }
 		    //		    fits<<counter<<";"<<shift<<";"<<alpha<<";"<<skp.pos<<";"<<rpos<<";"<<getter(skp).skew<<";"<<getter(skp).predskew<<endl;
 		    
@@ -263,14 +266,18 @@ BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKP
 
 int main(int argc, char **argv)
 {
+
   string fname("skplot.csv");
   if(argc > 1)
     fname=argv[1];
+  cerr<<"Reading skplot.csv from "<<fname<<endl;
   csv::CSVReader reader(fname);
 
   set<string> filter;
-  for(int n = 2; n < argc; ++n)
+  for(int n = 2; n < argc; ++n) {
+    cerr<<"Filtering on "<<argv[n]<<endl;
     filter.insert(argv[n]);
+  }
   
   /*
   for(const auto& s: reader.get_col_names()) {
@@ -290,7 +297,7 @@ int main(int argc, char **argv)
   int abspos = safeindex("abspos"); //
   int gcskew = safeindex("gcskew");
   int taskew = safeindex("taskew");
-  int sbskew = safeindex("pospos"); //
+  int sbskew = safeindex("pospos"); // 
   int gc0 = safeindex("gcskew0");
   int gc1 = safeindex("gcskew1");
   int gc2 = safeindex("gcskew2");
