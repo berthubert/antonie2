@@ -21,7 +21,9 @@
 
 using namespace std;
 
-// reads several chromosomes and bunches statistics about them together in two csv files
+// reads one chromosome and bunches statistics about them together in two csv files
+// scan.csv:
+// codons.csv: 
 
 int main(int argc, char**argv)
 {
