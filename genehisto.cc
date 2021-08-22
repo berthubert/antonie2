@@ -36,7 +36,7 @@ using namespace std;
 int main(int argc, char**argv)
 {
   if(argc < 2) {
-    cerr<<"Syntax: genehisto reference.fasta"<<endl;
+    cerr<<"Syntax: genehisto reference.fasta ..."<<endl;
     return EXIT_FAILURE;
   }
 
