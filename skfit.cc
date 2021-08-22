@@ -36,7 +36,7 @@ Bad fits that should just work better:
   NZ_CP007747.1
   NC_014119.1
 
-
+  NZ_LR890466.1
 
 REVERSE GC/TA:
   NC_015949.1
@@ -72,6 +72,7 @@ struct BiasStats
   int minpos;
   int maxpos;
   int shift;
+  double div;
   double alpha1{0};
   double alpha2{0};
   double origRMS{0};
@@ -81,13 +82,15 @@ struct BiasStats
 struct SKPos
 {
   int pos;
-  int gccount;
+  int gccount, ngcount;
   int acounts2, ccounts2, gcounts2, tcounts2;
 
   struct SkewDeets
   {
     double skew;
-    double predskew;
+    double skewdiff{0};
+    double predskew{0};
+    double predskewdiff{0};
   } gc, ta, sb,
     gc0, gc1, gc2,
     ta0, ta1, ta2,
@@ -116,7 +119,7 @@ struct SKPos
 
 
 
-BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKPos>& chromo, std::optional<double> leshift = std::optional<double>())
+BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKPos>& chromo, std::optional<double> leshift = std::optional<double>(), std::optional<double> lediv = std::optional<double>())
 {
     auto getAbsAvg = [&getter](vector<SKPos>& v) {
 		       double tot=0.0;
@@ -132,95 +135,98 @@ BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKP
     // this is called by the optimizer to evaluate a fit based on the parameters
     auto func2 = [&chromo, &getter](const vector<double>& params) {
 		  // alpha, shift
-		  auto& alpha = params[0];
-		  auto shift = params[1];
-		  //		  cout<<"func2 alpha "<<alpha<<" shift "<<shift<<endl;
+		  auto& alpha1 = params[0];
+                  auto& alpha2 = params[1];
+		  auto shift = params[2];
+                  auto div = params[3];
+                  //                  cout<<"func2 alpha1 "<<alpha1<<" alpha2 "<<alpha2<<" shift "<<shift<<" div "<<div<<endl;
 		  static int counter=0;
 		  double missRMS=0;
 		  double chromolen = chromo.rbegin()->pos;
-		  double half = 0.5*chromolen;
-
-
-		  //		  static ofstream fits("fits.csv");
-		  //		  if(!counter) {
-		  //		    fits<<"counter;shift;alpha;pos;rpos;skew;pred"<<endl;
-		  // }
-
-		  if(shift < 0)
-		    shift += chromolen;
-		  if(shift > chromolen)
-		    shift -= chromolen;
-		  auto iter = lower_bound(chromo.begin(), chromo.end(), shift,
-					  [](const auto& a, double shift) {
-					    return a.pos < shift;
-					  }
-					  );
-		  double downshift=0;
-		  if(iter != chromo.end()) {
-		    //		    cout<<"Shift is "<<shift<<" need to adjust "<< getter(*iter).skew <<" down"<<endl;
-		    downshift=-getter(*iter).skew;
-		  }
+                  double cumul=0;
+                  int prevpos = 0;
 		  for(auto& skp : chromo) {
-		    int rpos = skp.pos - shift;
-		    if(rpos < 0)
-		      rpos += chromolen;
-		    else if(rpos > chromolen)
-		      rpos -= chromolen;
-		    
-		    
-		    if(rpos < half) {
-		      getter(skp).predskew = -downshift + alpha * rpos;
-                      skp.predleading=true;
-		    }
-		    else { // straight up until we hit half
-		      getter(skp).predskew = -downshift + alpha * half - (rpos - half)*alpha;
+		    int rpos = skp.pos;
+                    if((rpos < shift || rpos > shift + div*chromolen) && (shift > 0 || rpos < chromolen + shift)  ) { // going down
+                      getter(skp).predskewdiff = -alpha1;
+                      cumul -= (skp.pos - prevpos)*alpha1;
+                      getter(skp).predskew=cumul;
                       skp.predleading=false;
 		    }
+		    else {
+                      getter(skp).predskewdiff = alpha2;
+                      cumul += (skp.pos - prevpos)*alpha2;
+                      getter(skp).predskew=cumul;                      
+                      skp.predleading=true;
+		    }
+                    prevpos = skp.pos;
 		    //		    fits<<counter<<";"<<shift<<";"<<alpha<<";"<<skp.pos<<";"<<rpos<<";"<<getter(skp).skew<<";"<<getter(skp).predskew<<endl;
 		    
-		    missRMS += pow(getter(skp).skew - getter(skp).predskew, 2);
-		  }
+                    //		    missRMS += pow(getter(skp).skewdiff - getter(skp).predskewdiff, 2);
+                    missRMS += pow(getter(skp).skew - getter(skp).predskew, 2);
+                  }
 		  ++counter;
+                  //                  cout<<"Returning missRMS "<<missRMS<<endl;
 		  return missRMS;
 		};
 
     
     
-    Amoeba amo(0.0001);
+    Amoeba amo(0.00001); // was 0.0001
     //    vector<double> params({alpha, alpha, 1.0*maxpos, 1.0*minpos});
 
 
-    double minval=1e9, maxval=0;
-    for(auto& skp : chromo) {
-      if(getter(skp).skew < minval)
-	minval = getter(skp).skew;
-      if(getter(skp).skew > maxval)
-	maxval = getter(skp).skew;
+    // create derivative
+    for(auto iter = chromo.begin() ; iter != chromo.end() ; ++iter) {
+      if(iter==chromo.begin()) {
+        getter(*iter).skewdiff=0;
+        continue;
+      }
+
+      getter(*iter).skewdiff = getter(*iter).skew -  getter(*std::prev(iter)).skew;
     }
 
-    //    cout<<"minval: "<<minval<<", maxval: "<<maxval<<", alpha ";
-    double alpha2 = 2*(maxval-minval)/ chromo.rbegin()->pos;
-    //    cout<<alpha2<<endl;
+    // initial guess at alphas
+    double totalpha=0;
+    auto citer = chromo.begin();
+    for(; citer < chromo.begin() + chromo.size()/2; ++citer) {
+      totalpha += getter(*citer).skewdiff;
+    }
+    for(; citer != chromo.end(); ++citer) {
+      totalpha -= getter(*citer).skewdiff;
+    }
+
     
-    vector<double> params({alpha2});
-    vector<double> deltas({0.0001});
+    //    cout<<"minval: "<<minval<<", maxval: "<<maxval<<", alpha ";
+    double alpha2 = totalpha/chromo.rbegin()->pos;
+    cout<<"Estimated alpha "<<alpha2<<endl;
+    
+    vector<double> params({alpha2, alpha2});
+    vector<double> deltas({10,10});
+    
     if(leshift) {
       params.push_back(*leshift);
       deltas.push_back(0); // the shift is fixed
+      params.push_back(*lediv); // excess, for uneven lagging and leading strands
+      deltas.push_back(0); // fixed
+
     }
     else {
       params.push_back(0);
       deltas.push_back(0.1*chromo.rbegin()->pos);
+
+      params.push_back(0.5); // the divider
+      deltas.push_back(0.01); // 
     }
     //    cout<<"Initial: alpha "<<alpha<<" maxpos "<< maxpos<<" minpos "<<minpos<<" FuncRMS: "<<sqrt(func2(params))/chromo.size()/getAbsAvg(chromo)<<endl;
 
     // first attempt, based on an educated guess
     double newRMS;
 
-    //cout<<"Optimizing: ";
+    cout<<"Optimizing: ";
     auto np = amo.minimize(params, deltas, func2);
     
-    newRMS = sqrt(func2(np)) / chromo.size() / getAbsAvg(chromo);
+    newRMS = func2(np);
     //    auto nv = sqrt(func2(np));
     //    cout << "alpha: " << np[0]<< ", shift: "<<np[1]<<", newRMS: "<<newRMS<<", sqrt(rms): ";
     //    cout << nv <<", chromo.size(): "<<chromo.size()<<", absavg: "<<getAbsAvg(chromo)<<endl;
@@ -230,20 +236,18 @@ BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKP
     // seeing if we can improve on this with some brute force
     map<double, vector<double>> scores;
     scores[newRMS]=params; // make sure the original fit is still in there
-    /*
+
     for(int x=1; x < 5 ; ++x) {
-      params[0]=alpha2;
-      params[1]= 0.1*x*chromo.rbegin()->pos;
       cout<<"Optimizing round "<<x<<" ";
       auto np = amo.minimize(params, deltas, func2);
-      newRMS = sqrt(func(np)) / chromo.sizs() / getAbsAvg(chromo);
-      cout << "alpha: " << np[0]<< ", shift: "<<np[1] <<", newRMS: "<<newRMS<<endl;
+      newRMS = func2(np);
+      cout << "alpha1: " << np[0]<< ", alpha2: "<<np[1] <<", newRMS: "<<newRMS<<endl;
       params=np;
       scores[newRMS]=params;
     }
-    */
+
     auto& best = *scores.begin();
-    //    cout<<"Best result: ";
+    cout<<"Best result: "<<best.first<<" ";
     func2(best.second);  // this fills out the struct for the graphs
     np = best.second;
     //    cout << "alpha: " << np[0]<< ", shift: "<<np[1]<<", new RMS: "<<best.first<<endl;
@@ -252,13 +256,12 @@ BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKP
 
     BiasStats ret;
     ret.alpha1= params[0];
-    ret.shift = params[1];
-    /*
     ret.alpha2= params[1];
-    ret.minpos = params[2];
-    ret.maxpos = params[3];
-    */
-    ret.rms = newRMS;
+    ret.shift = params[2];
+    ret.div = params[3];
+
+    ret.rms = sqrt(newRMS) / chromo.size() /getAbsAvg(chromo);
+    cout<<"Done, adjusted RMS: " << ret.rms <<endl;
     // XXX
     return ret;
 }
@@ -313,6 +316,7 @@ int main(int argc, char **argv)
   int gcNG = safeindex("gcskewNG");
   int taNG = safeindex("taskewNG");
   int gccount = safeindex("gccount");
+  int ngcount = safeindex("ngcount");
 
   struct {
     BiasStats gc, ta, sb,
@@ -325,25 +329,27 @@ int main(int argc, char **argv)
   for (csv::CSVRow& row: reader) { // Input iterator
     if(!filter.empty() && !filter.count(row[name].get<string>()))
       continue;
+
     chromosomes[row[name].get<string>()].push_back({row[abspos].get<int>(),
 					      row[gccount].get<int>(),
+					      row[ngcount].get<int>(),                                                    
 					      row[acounts2].get<int>(),
 					      row[ccounts2].get<int>(),
 					      row[gcounts2].get<int>(),
 					      row[tcounts2].get<int>(),
-					      {row[gcskew].get<double>(),0},
-					      {row[taskew].get<double>(),0},
-					      {row[sbskew].get<double>(),0},
-					      {row[gc0].get<double>(),0},
-					      {row[gc1].get<double>(),0},
-					      {row[gc2].get<double>(),0},
+					      {row[gcskew].get<double>()},
+					      {row[taskew].get<double>()},
+					      {row[sbskew].get<double>()},
+					      {row[gc0].get<double>()},
+					      {row[gc1].get<double>()},
+					      {row[gc2].get<double>()},
 
-    					      {row[ta0].get<double>(),0},
-					      {row[ta1].get<double>(),0},
-					      {row[ta2].get<double>(),0},
+    					      {row[ta0].get<double>()},
+					      {row[ta1].get<double>()},
+					      {row[ta2].get<double>()},
 
-					      {row[gcNG].get<double>(),0},
- 					      {row[taNG].get<double>(),0}
+					      {row[gcNG].get<double>()},
+ 					      {row[taNG].get<double>()}
 			
 
 
@@ -355,8 +361,8 @@ int main(int argc, char **argv)
   resos<<std::scientific;
   auto reswriter = csv::make_csv_writer(resos);
   resos<<std::scientific;
-  reswriter << vector<string>({"name", "flipped", "siz", "gccount", "acounts2", "ccounts2", "gcounts2", "tcounts2", "maxpos",
-			       "alpha1gc", "minpos", "alpha2gc", "shift", 
+  reswriter << vector<string>({"name", "flipped", "siz", "gccount", "ngcount", "acounts2", "ccounts2", "gcounts2", "tcounts2", "maxpos",
+			       "alpha1gc", "minpos", "alpha2gc", "shift", "div",
 			       "alpha1ta", "alpha2ta",
 			       "alpha1sb", "alpha2sb",
 			       
@@ -426,7 +432,7 @@ int main(int argc, char **argv)
 
     //    cout << "GC skew"<<endl;
     biases.gc = doAnalysis(gcgetter, g.second);
-    cout<<"Shift: "<<biases.gc.shift<<", gc.alpha1: "<<biases.gc.alpha1<<endl;
+    cout<<"Shift: "<<biases.gc.shift<<", gc.alpha1: "<<biases.gc.alpha1<<", div: "<<biases.gc.div << endl;
 
     if(biases.gc.alpha1 < 0) {
       cout<<"Flipping "<<g.first<<endl;
@@ -439,12 +445,14 @@ int main(int argc, char **argv)
 	skp.gcNG.skew *= -1;
 
 	skp.ta.skew   *= -1;
-
 	skp.ta0.skew  *= -1;
 	skp.ta1.skew  *= -1;
 	skp.ta2.skew  *= -1;
+
 	skp.taNG.skew *= -1;
+        skp.sb.skew *= -1; // perhaps not?
       }
+
       biases.gc = doAnalysis(gcgetter, g.second);
       cout<<"Shift: "<<biases.gc.shift<<endl;
     }
@@ -453,30 +461,30 @@ int main(int argc, char **argv)
     auto tagetter = [](SKPos& skp) -> SKPos::SkewDeets& {
 	       return skp.ta;
 	     };
-    //    cout << "TA skew"<<endl;
-    biases.ta = doAnalysis(tagetter, g.second, biases.gc.shift);
+    cout << "TA skew"<<endl;
+    biases.ta = doAnalysis(tagetter, g.second, biases.gc.shift, biases.gc.div);
 
     // SB
     auto sbgetter = [](SKPos& skp) -> SKPos::SkewDeets& {
 	       return skp.sb;
 	     };
 
-    //    cout << "SB skew"<<endl;
-    biases.sb = doAnalysis(sbgetter, g.second, biases.gc.shift);
+    cout << "SB skew"<<endl;
+    biases.sb = doAnalysis(sbgetter, g.second, biases.gc.shift, biases.gc.div);
 
     // GC0
     auto gc0getter = [](SKPos& skp) -> SKPos::SkewDeets& {
 	       return skp.gc0;
 	     };
-    //    cout << "gc0 skew"<<endl;
-    biases.gc0 = doAnalysis(gc0getter, g.second, biases.gc.shift);
+    cout << "gc0 skew"<<endl;
+    biases.gc0 = doAnalysis(gc0getter, g.second, biases.gc.shift, biases.gc.div);
 
     // GC1
     auto gc1getter = [](SKPos& skp) -> SKPos::SkewDeets& {
 	       return skp.gc1;
 	     };
     //    cout << "gc1 skew"<<endl;
-    biases.gc1 = doAnalysis(gc1getter, g.second, biases.gc.shift);
+    biases.gc1 = doAnalysis(gc1getter, g.second, biases.gc.shift, biases.gc.div);
 
     // GC2
     auto gc2getter = [](SKPos& skp) -> SKPos::SkewDeets& {
@@ -484,28 +492,28 @@ int main(int argc, char **argv)
 	     };
 
     //    cout << "gc2 skew"<<endl;
-    biases.gc2 = doAnalysis(gc2getter, g.second, biases.gc.shift);
+    biases.gc2 = doAnalysis(gc2getter, g.second, biases.gc.shift, biases.gc.div);
 
     // gcng
     auto gcnggetter = [](SKPos& skp) -> SKPos::SkewDeets& {
 	       return skp.gcNG;
 	     };
     //    cout << "ng skew"<<endl;
-    biases.gcng = doAnalysis(gcnggetter, g.second, biases.gc.shift);
+    biases.gcng = doAnalysis(gcnggetter, g.second, biases.gc.shift, biases.gc.div);
 
     // TA0
     auto ta0getter = [](SKPos& skp) -> SKPos::SkewDeets& {
 	       return skp.ta0;
 	     };
     //    cout << "ta0 skew"<<endl;
-    biases.ta0 = doAnalysis(ta0getter, g.second, biases.gc.shift);
+    biases.ta0 = doAnalysis(ta0getter, g.second, biases.gc.shift, biases.gc.div);
 
     // TA1
     auto ta1getter = [](SKPos& skp) -> SKPos::SkewDeets& {
 	       return skp.ta1;
 	     };
     //    cout << "ta1 skew"<<endl;
-    biases.ta1 = doAnalysis(ta1getter, g.second, biases.gc.shift);
+    biases.ta1 = doAnalysis(ta1getter, g.second, biases.gc.shift, biases.gc.div);
 
     // TA2
     auto ta2getter = [](SKPos& skp) -> SKPos::SkewDeets& {
@@ -513,23 +521,23 @@ int main(int argc, char **argv)
 	     };
 
     //    cout << "ta2 skew"<<endl;
-    biases.ta2 = doAnalysis(ta2getter, g.second, biases.gc.shift);
+    biases.ta2 = doAnalysis(ta2getter, g.second, biases.gc.shift, biases.gc.div);
 
     // tang
     auto nggetter = [](SKPos& skp) -> SKPos::SkewDeets& {
 	       return skp.taNG;
 	     };
     //    cout << "ng skew"<<endl;
-    biases.tang = doAnalysis(nggetter, g.second, biases.gc.shift);
+    biases.tang = doAnalysis(nggetter, g.second, biases.gc.shift, biases.gc.div);
     
     doDump(g);
 
-    reswriter << make_tuple(g.first, flipped, g.second.rbegin()->pos, g.second.rbegin()->gccount,
+    reswriter << make_tuple(g.first, flipped, g.second.rbegin()->pos, g.second.rbegin()->gccount, g.second.rbegin()->ngcount,
 			    g.second.rbegin()->acounts2,
 			    g.second.rbegin()->ccounts2,
 			    g.second.rbegin()->gcounts2,
 			    g.second.rbegin()->tcounts2, 
-			    maxpos, biases.gc.alpha1, minpos, biases.gc.alpha2, biases.gc.shift,
+			    maxpos, biases.gc.alpha1, minpos, biases.gc.alpha2, biases.gc.shift, biases.gc.div,
 			    biases.ta.alpha1, biases.ta.alpha2,
 			    biases.sb.alpha1, biases.sb.alpha2,
 			    
@@ -552,6 +560,9 @@ int main(int argc, char **argv)
 
   }
 }
+
+
+
 
 
 #if 0    
