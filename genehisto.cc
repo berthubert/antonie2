@@ -14,6 +14,7 @@
 #include <mutex>
 #include <fstream>
 #include <boost/container/small_vector.hpp>
+#include <boost/algorithm/string.hpp>
 #include <future>
 #include <sstream>
 #include <sys/prctl.h>
@@ -92,7 +93,7 @@ int main(int argc, char**argv)
     try {
       ReferenceGenome rg(argv[n]);
       string garname = argv[n];
-      garname.replace(garname.size()-3, 3, "gff");
+      boost::replace_all(garname, ".fna", ".gff");
   
     
       cout<<"Done reading genome from "<<argv[n]<<", have "<<rg.numChromosomes()<<" chromosomes, "<<
