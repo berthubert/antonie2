@@ -5,6 +5,8 @@ mostly from Next Generation Sequencing platforms (typically Illumina, but we
 strive to be multiplatform).  It is currently focussed on prokaryotic and
 other small genomes.
 
+In addition, there is a whole bunch of tools to perform GC skew analyses.
+
 Antonie is free open source software, and we welcome contributions!
 
 Initial focus is on automatically & quickly producing the most useful
@@ -18,18 +20,15 @@ Delft inventor of microscopes and the discoverer of bacteria.
 
 AUTHORS
 =======
-Antonie is developed at the Bertus Beaumontlab of the Bionanoscience
+Antonie started life at the Bertus Beaumontlab of the Bionanoscience
 Department of Delft University of Technology.  The lead author is Bert
-Hubert.
+Hubert, who continues developing on it from his own house. 
 
 For more information, please see:
 
  * [Bionanoscience department](http://www.tnw.tudelft.nl/en/about-faculty/departments/bionanoscience/)
  * [Bertus Beaumont Lab](http://bertusbeaumontlab.tudelft.nl/) and the [Antonie page there](http://bertusbeaumontlab.tudelft.nl/software.html)
- * [bert hubert](http://ds9a.nl/)
-
-Please contact us at a.w.r.hubert at tudelft dot nl, or report issues
-through our GitHub page on <https://github.com/beaumontlab/antonie>.
+ * [bert hubert](http://berthub.eu/)
 
 DOWNLOADING
 ===========
