@@ -16,7 +16,7 @@ jobs:
     - name: deps
       run: |
         sudo apt-get update
-        sudo apt-get install libboost-dev libz-dev
+        sudo apt-get install libboost-dev libz-dev libboost-test-dev
     - name: make
       run: make
     - name: make check
