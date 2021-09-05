@@ -17,7 +17,7 @@ using namespace std;
 int main(int argc, char **argv)
 {
   if(argc < 3) {
-    cerr<<"Syntax: gfflookup refgenome.fna chromosome offset1 offset2"<<endl;
+    cerr<<"Syntax: gendump refgenome.fna chromosome offset1 offset2"<<endl;
     return EXIT_FAILURE;
   }
 
