@@ -1,6 +1,6 @@
 #pragma once
 /*
-CSV for C++, version 2.1.0
+CSV for C++, version 2.1.3
 https://github.com/vincentlaucsb/csv-parser
 
 MIT License
@@ -44,7 +44,7 @@ SOFTWARE.
 #include <sstream>
 #include <string>
 #include <vector>
-#include <charconv>
+
 /* Copyright 2017 https://github.com/mandreyel
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -1828,12 +1828,14 @@ using shared_ummap_sink = basic_shared_mmap_sink<unsigned char>;
 #include <deque>
 
 #if defined(_WIN32)
-#include <Windows.h>
-#define WIN32_LEAN_AND_MEAN
-#undef max
-#undef min
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif
+# include <Windows.h>
+# undef max
+# undef min
 #elif defined(__linux__)
-#include <unistd.h>
+# include <unistd.h>
 #endif
 
  /** Helper macro which should be #defined as "inline"
@@ -4691,6 +4693,8 @@ namespace csv {
      *  Intended for functions and methods.
      */
 
+#define STATIC_ASSERT(x) static_assert(x, "Assertion failed")
+
 #if CMAKE_CXX_STANDARD == 17 || __cplusplus >= 201703L
 #define CSV_HAS_CXX17
 #endif
@@ -4713,31 +4717,41 @@ namespace csv {
 #endif
 
 #ifdef CSV_HAS_CXX17
-#define IF_CONSTEXPR if constexpr
-#define CONSTEXPR_VALUE constexpr
+    #define IF_CONSTEXPR if constexpr
+    #define CONSTEXPR_VALUE constexpr
+
+    #define CONSTEXPR_17 constexpr
 #else
-#define IF_CONSTEXPR if
-#define CONSTEXPR_VALUE const
+    #define IF_CONSTEXPR if
+    #define CONSTEXPR_VALUE const
+
+    #define CONSTEXPR_17 inline
 #endif
 
 #ifdef CSV_HAS_CXX14
     template<bool B, class T = void>
     using enable_if_t = std::enable_if_t<B, T>;
+
+    #define CONSTEXPR_14 constexpr
+    #define CONSTEXPR_VALUE_14 constexpr
 #else
     template<bool B, class T = void>
     using enable_if_t = typename std::enable_if<B, T>::type;
+
+    #define CONSTEXPR_14 inline
+    #define CONSTEXPR_VALUE_14 const
 #endif
 
     // Resolves g++ bug with regard to constexpr methods
     // See: https://stackoverflow.com/questions/36489369/constexpr-non-static-member-function-with-non-constexpr-constructor-gcc-clang-d
 #if defined __GNUC__ && !defined __clang__
-#if (__GNUC__ >= 7 &&__GNUC_MINOR__ >= 2) || (__GNUC__ >= 8)
-#define CONSTEXPR constexpr
-#endif
-#else
-#ifdef CSV_HAS_CXX17
-#define CONSTEXPR constexpr
-#endif
+    #if (__GNUC__ >= 7 &&__GNUC_MINOR__ >= 2) || (__GNUC__ >= 8)
+        #define CONSTEXPR constexpr
+    #endif
+    #else
+        #ifdef CSV_HAS_CXX17
+        #define CONSTEXPR constexpr
+    #endif
 #endif
 
 #ifndef CONSTEXPR
@@ -4806,22 +4820,22 @@ namespace csv {
 
         // Assumed to be true by parsing functions: allows for testing
         // if an item is DELIMITER or NEWLINE with a >= statement
-        static_assert(ParseFlags::DELIMITER < ParseFlags::NEWLINE);
+        STATIC_ASSERT(ParseFlags::DELIMITER < ParseFlags::NEWLINE);
 
         /** Optimizations for reducing branching in parsing loop
          *
          *  Idea: The meaning of all non-quote characters changes depending
          *  on whether or not the parser is in a quote-escaped mode (0 or 1)
          */
-        static_assert(quote_escape_flag(ParseFlags::NOT_SPECIAL, false) == ParseFlags::NOT_SPECIAL);
-        static_assert(quote_escape_flag(ParseFlags::QUOTE, false) == ParseFlags::QUOTE);
-        static_assert(quote_escape_flag(ParseFlags::DELIMITER, false) == ParseFlags::DELIMITER);
-        static_assert(quote_escape_flag(ParseFlags::NEWLINE, false) == ParseFlags::NEWLINE);
+        STATIC_ASSERT(quote_escape_flag(ParseFlags::NOT_SPECIAL, false) == ParseFlags::NOT_SPECIAL);
+        STATIC_ASSERT(quote_escape_flag(ParseFlags::QUOTE, false) == ParseFlags::QUOTE);
+        STATIC_ASSERT(quote_escape_flag(ParseFlags::DELIMITER, false) == ParseFlags::DELIMITER);
+        STATIC_ASSERT(quote_escape_flag(ParseFlags::NEWLINE, false) == ParseFlags::NEWLINE);
 
-        static_assert(quote_escape_flag(ParseFlags::NOT_SPECIAL, true) == ParseFlags::NOT_SPECIAL);
-        static_assert(quote_escape_flag(ParseFlags::QUOTE, true) == ParseFlags::QUOTE_ESCAPE_QUOTE);
-        static_assert(quote_escape_flag(ParseFlags::DELIMITER, true) == ParseFlags::NOT_SPECIAL);
-        static_assert(quote_escape_flag(ParseFlags::NEWLINE, true) == ParseFlags::NOT_SPECIAL);
+        STATIC_ASSERT(quote_escape_flag(ParseFlags::NOT_SPECIAL, true) == ParseFlags::NOT_SPECIAL);
+        STATIC_ASSERT(quote_escape_flag(ParseFlags::QUOTE, true) == ParseFlags::QUOTE_ESCAPE_QUOTE);
+        STATIC_ASSERT(quote_escape_flag(ParseFlags::DELIMITER, true) == ParseFlags::NOT_SPECIAL);
+        STATIC_ASSERT(quote_escape_flag(ParseFlags::NEWLINE, true) == ParseFlags::NOT_SPECIAL);
 
         /** An array which maps ASCII chars to a parsing flag */
         using ParseFlagMap = std::array<ParseFlags, 256>;
@@ -4960,13 +4974,13 @@ namespace csv {
         }
 
         /** Tells the parser how to handle columns of a different length than the others */
-        CONSTEXPR CSVFormat& variable_columns(VariableColumnPolicy policy = VariableColumnPolicy::IGNORE_ROW) {
+        CONSTEXPR_14 CSVFormat& variable_columns(VariableColumnPolicy policy = VariableColumnPolicy::IGNORE_ROW) {
             this->variable_column_policy = policy;
             return *this;
         }
 
         /** Tells the parser how to handle columns of a different length than the others */
-        CONSTEXPR CSVFormat& variable_columns(bool policy) {
+        CONSTEXPR_14 CSVFormat& variable_columns(bool policy) {
             this->variable_column_policy = (VariableColumnPolicy)policy;
             return *this;
         }
@@ -5081,7 +5095,7 @@ namespace csv {
     namespace internals {
         /** Compute 10 to the power of n */
         template<typename T>
-        HEDLEY_CONST CONSTEXPR
+        HEDLEY_CONST CONSTEXPR_14
         long double pow10(const T& n) noexcept {
             long double multiplicand = n > 0 ? 10 : 0.1,
                 ret = 1;
@@ -5098,7 +5112,7 @@ namespace csv {
 
         /** Compute 10 to the power of n */
         template<>
-        HEDLEY_CONST CONSTEXPR
+        HEDLEY_CONST CONSTEXPR_14
         long double pow10(const unsigned& n) noexcept {
             long double multiplicand = n > 0 ? 10 : 0.1,
                 ret = 1;
@@ -5136,7 +5150,7 @@ namespace csv {
         template<> inline DataType type_num<std::nullptr_t>() { return DataType::CSV_NULL; }
         template<> inline DataType type_num<std::string>() { return DataType::CSV_STRING; }
 
-        CONSTEXPR DataType data_type(csv::string_view in, long double* const out = nullptr);
+        CONSTEXPR_14 DataType data_type(csv::string_view in, long double* const out = nullptr);
 #endif
 
         /** Given a byte size, return the largest number than can be stored in
@@ -5146,7 +5160,7 @@ namespace csv {
          *  byte sizes
          */
         template<size_t Bytes>
-        CONSTEXPR long double get_int_max() {
+        CONSTEXPR_14 long double get_int_max() {
             static_assert(Bytes == 1 || Bytes == 2 || Bytes == 4 || Bytes == 8,
                 "Bytes must be a power of 2 below 8.");
 
@@ -5177,7 +5191,7 @@ namespace csv {
          *  an unsigned integer of that size
          */
         template<size_t Bytes>
-        CONSTEXPR long double get_uint_max() {
+        CONSTEXPR_14 long double get_uint_max() {
             static_assert(Bytes == 1 || Bytes == 2 || Bytes == 4 || Bytes == 8,
                 "Bytes must be a power of 2 below 8.");
 
@@ -5205,34 +5219,34 @@ namespace csv {
         }
 
         /** Largest number that can be stored in a 8-bit integer */
-        CONSTEXPR_VALUE long double CSV_INT8_MAX = get_int_max<1>();
+        CONSTEXPR_VALUE_14 long double CSV_INT8_MAX = get_int_max<1>();
 
         /** Largest number that can be stored in a 16-bit integer */
-        CONSTEXPR_VALUE long double CSV_INT16_MAX = get_int_max<2>();
+        CONSTEXPR_VALUE_14 long double CSV_INT16_MAX = get_int_max<2>();
 
         /** Largest number that can be stored in a 32-bit integer */
-        CONSTEXPR_VALUE long double CSV_INT32_MAX = get_int_max<4>();
+        CONSTEXPR_VALUE_14 long double CSV_INT32_MAX = get_int_max<4>();
 
         /** Largest number that can be stored in a 64-bit integer */
-        CONSTEXPR_VALUE long double CSV_INT64_MAX = get_int_max<8>();
+        CONSTEXPR_VALUE_14 long double CSV_INT64_MAX = get_int_max<8>();
 
         /** Largest number that can be stored in a 8-bit ungisned integer */
-        CONSTEXPR_VALUE long double CSV_UINT8_MAX = get_uint_max<1>();
+        CONSTEXPR_VALUE_14 long double CSV_UINT8_MAX = get_uint_max<1>();
 
         /** Largest number that can be stored in a 16-bit unsigned integer */
-        CONSTEXPR_VALUE long double CSV_UINT16_MAX = get_uint_max<2>();
+        CONSTEXPR_VALUE_14 long double CSV_UINT16_MAX = get_uint_max<2>();
 
         /** Largest number that can be stored in a 32-bit unsigned integer */
-        CONSTEXPR_VALUE long double CSV_UINT32_MAX = get_uint_max<4>();
+        CONSTEXPR_VALUE_14 long double CSV_UINT32_MAX = get_uint_max<4>();
 
         /** Largest number that can be stored in a 64-bit unsigned integer */
-        CONSTEXPR_VALUE long double CSV_UINT64_MAX = get_uint_max<8>();
+        CONSTEXPR_VALUE_14 long double CSV_UINT64_MAX = get_uint_max<8>();
 
         /** Given a pointer to the start of what is start of
          *  the exponential part of a number written (possibly) in scientific notation
          *  parse the exponent
          */
-        HEDLEY_PRIVATE CONSTEXPR
+        HEDLEY_PRIVATE CONSTEXPR_14
         DataType _process_potential_exponential(
             csv::string_view exponential_part,
             const long double& coeff,
@@ -5252,7 +5266,7 @@ namespace csv {
         /** Given the absolute value of an integer, determine what numeric type
          *  it fits in
          */
-        HEDLEY_PRIVATE HEDLEY_PURE CONSTEXPR
+        HEDLEY_PRIVATE HEDLEY_PURE CONSTEXPR_14
         DataType _determine_integral_type(const long double& number) noexcept {
             // We can assume number is always non-negative
             assert(number >= 0);
@@ -5280,7 +5294,7 @@ namespace csv {
          *  @param[out] out Pointer to long double where results of numeric parsing
          *                  get stored
          */
-        CONSTEXPR
+        CONSTEXPR_14
         DataType data_type(csv::string_view in, long double* const out) {
             // Empty string --> NULL
             if (in.size() == 0)
@@ -5351,7 +5365,7 @@ namespace csv {
                     return DataType::CSV_STRING;
                     break;
                 default:
-                    short digit = current - '0';
+                    short digit = static_cast<short>(current - '0');
                     if (digit >= 0 && digit <= 9) {
                         // Process digit
                         has_digit = true;
@@ -5586,6 +5600,9 @@ namespace csv {
             return static_cast<T>(this->value);
         }
 
+        /** Parse a hexadecimal value, returning false if the value is not hex. */
+        bool try_parse_hex(int& parsedValue);
+
         /** Compares the contents of this field to a numeric value. If this
          *  field does not contain a numeric value, then all comparisons return
          *  false.
@@ -5600,7 +5617,7 @@ namespace csv {
          *  @sa      csv::CSVField::operator==(csv::string_view other)
          */
         template<typename T>
-        CONSTEXPR bool operator==(T other) const noexcept
+        CONSTEXPR_14 bool operator==(T other) const noexcept
         {
             static_assert(std::is_arithmetic<T>::value,
                 "T should be a numeric value.");
@@ -5625,24 +5642,24 @@ namespace csv {
         CONSTEXPR csv::string_view get_sv() const noexcept { return this->sv; }
 
         /** Returns true if field is an empty string or string of whitespace characters */
-        CONSTEXPR bool is_null() noexcept { return type() == DataType::CSV_NULL; }
+        CONSTEXPR_14 bool is_null() noexcept { return type() == DataType::CSV_NULL; }
 
         /** Returns true if field is a non-numeric, non-empty string */
-        CONSTEXPR bool is_str() noexcept { return type() == DataType::CSV_STRING; }
+        CONSTEXPR_14 bool is_str() noexcept { return type() == DataType::CSV_STRING; }
 
         /** Returns true if field is an integer or float */
-        CONSTEXPR bool is_num() noexcept { return type() >= DataType::CSV_INT8; }
+        CONSTEXPR_14 bool is_num() noexcept { return type() >= DataType::CSV_INT8; }
 
         /** Returns true if field is an integer */
-        CONSTEXPR bool is_int() noexcept {
+        CONSTEXPR_14 bool is_int() noexcept {
             return (type() >= DataType::CSV_INT8) && (type() <= DataType::CSV_INT64);
         }
 
         /** Returns true if field is a floating point value */
-        CONSTEXPR bool is_float() noexcept { return type() == DataType::CSV_DOUBLE; };
+        CONSTEXPR_14 bool is_float() noexcept { return type() == DataType::CSV_DOUBLE; };
 
         /** Return the type of the underlying CSV data */
-        CONSTEXPR DataType type() noexcept {
+        CONSTEXPR_14 DataType type() noexcept {
             this->get_value();
             return _type;
         }
@@ -5651,7 +5668,7 @@ namespace csv {
         long double value = 0;    /**< Cached numeric value */
         csv::string_view sv = ""; /**< A pointer to this field's text */
         DataType _type = DataType::UNKNOWN; /**< Cached data type value */
-        CONSTEXPR void get_value() noexcept {
+        CONSTEXPR_14 void get_value() noexcept {
             /* Check to see if value has been cached previously, if not
              * evaluate it
              */
@@ -5791,13 +5808,13 @@ namespace csv {
      *           CSVRow is still alive.
      */
     template<>
-    CONSTEXPR csv::string_view CSVField::get<csv::string_view>() {
+    CONSTEXPR_14 csv::string_view CSVField::get<csv::string_view>() {
         return this->sv;
     }
 
     /** Retrieve this field's value as a long double */
     template<>
-    CONSTEXPR long double CSVField::get<long double>() {
+    CONSTEXPR_14 long double CSVField::get<long double>() {
         if (!is_num())
             throw std::runtime_error(internals::ERROR_NAN);
 
@@ -5834,7 +5851,7 @@ namespace csv {
          *  ASCII number for a character and, v[i + 128] labels it according to
          *  the CSVReader::ParseFlags enum
          */
-        HEDLEY_CONST CONSTEXPR ParseFlagMap make_parse_flags(char delimiter) {
+        HEDLEY_CONST CONSTEXPR_17 ParseFlagMap make_parse_flags(char delimiter) {
             std::array<ParseFlags, 256> ret = {};
             for (int i = -128; i < 128; i++) {
                 const int arr_idx = i + 128;
@@ -5855,7 +5872,7 @@ namespace csv {
          *  ASCII number for a character and, v[i + 128] labels it according to
          *  the CSVReader::ParseFlags enum
          */
-        HEDLEY_CONST CONSTEXPR ParseFlagMap make_parse_flags(char delimiter, char quote_char) {
+        HEDLEY_CONST CONSTEXPR_17 ParseFlagMap make_parse_flags(char delimiter, char quote_char) {
             std::array<ParseFlags, 256> ret = make_parse_flags(delimiter);
             ret[(size_t)quote_char + 128] = ParseFlags::QUOTE;
             return ret;
@@ -5865,7 +5882,7 @@ namespace csv {
          *  ASCII number for a character c and, v[i + 128] is true if
          *  c is a whitespace character
          */
-        HEDLEY_CONST CONSTEXPR WhitespaceMap make_ws_flags(const char* ws_chars, size_t n_chars) {
+        HEDLEY_CONST CONSTEXPR_17 WhitespaceMap make_ws_flags(const char* ws_chars, size_t n_chars) {
             std::array<bool, 256> ret = {};
             for (int i = -128; i < 128; i++) {
                 const int arr_idx = i + 128;
@@ -6017,11 +6034,11 @@ namespace csv {
             /** Indicate the last block of data has been parsed */
             void end_feed();
 
-            CONSTEXPR ParseFlags parse_flag(const char ch) const noexcept {
+            CONSTEXPR_17 ParseFlags parse_flag(const char ch) const noexcept {
                 return _parse_flags.data()[ch + 128];
             }
 
-            CONSTEXPR ParseFlags compound_parse_flag(const char ch) const noexcept {
+            CONSTEXPR_17 ParseFlags compound_parse_flag(const char ch) const noexcept {
                 return quote_escape_flag(parse_flag(ch), this->quote_escape);
             }
 
@@ -6077,18 +6094,18 @@ namespace csv {
             /** Whether or not an attempt to find Unicode BOM has been made */
             bool unicode_bom_scan = false;
             bool _utf8_bom = false;
-            
+
             /** Where complete rows should be pushed to */
             RowCollection* _records = nullptr;
 
-            CONSTEXPR bool ws_flag(const char ch) const noexcept {
+            CONSTEXPR_17 bool ws_flag(const char ch) const noexcept {
                 return _ws_flags.data()[ch + 128];
             }
 
             size_t& current_row_start() {
                 return this->current_row.data_start;
             }
-    
+
             void parse_field() noexcept;
 
             /** Finish parsing the current field */
@@ -6112,7 +6129,7 @@ namespace csv {
             StreamParser(TStream& source,
                 const CSVFormat& format,
                 const ColNamesPtr& col_names = nullptr
-            ) : _source(std::move(source)), IBasicCSVParser(format, col_names) {};
+            ) : IBasicCSVParser(format, col_names), _source(std::move(source)) {};
 
             StreamParser(
                 TStream& source,
@@ -6164,8 +6181,8 @@ namespace csv {
             }
 
         private:
-	  TStream _source;
-	  size_t stream_pos = 0;
+            TStream _source;
+            size_t stream_pos = 0;
         };
 
         /** Parser for memory-mapped files
@@ -6197,6 +6214,7 @@ namespace csv {
         };
     }
 }
+
 
 /** The all encompassing namespace */
 namespace csv {
@@ -6258,10 +6276,10 @@ namespace csv {
             iterator(CSVReader*, CSVRow&&);
 
             /** Access the CSVRow held by the iterator */
-            CONSTEXPR reference operator*() { return this->row; }
+            CONSTEXPR_14 reference operator*() { return this->row; }
 
             /** Return a pointer to the CSVRow the iterator has stopped at */
-            CONSTEXPR pointer operator->() { return &(this->row); }
+            CONSTEXPR_14 pointer operator->() { return &(this->row); }
 
             iterator& operator++();   /**< Pre-increment iterator */
             iterator operator++(int); /**< Post-increment ierator */
@@ -6333,7 +6351,7 @@ namespace csv {
         std::vector<std::string> get_col_names() const;
         int index_of(csv::string_view col_name) const;
         ///@}
-        
+
         /** @name CSV Metadata: Attributes */
         ///@{
         /** Whether or not the file or stream contains valid CSV rows,
@@ -6376,7 +6394,7 @@ namespace csv {
         std::unique_ptr<internals::IBasicCSVParser> parser = nullptr;
 
         /** Queue of parsed CSV rows */
-        RowCollection records = RowCollection(100);
+        std::unique_ptr<RowCollection> records{new RowCollection(100)};
 
         size_t n_cols = 0;  /**< The number of columns in this CSV */
         size_t _n_rows = 0; /**< How many rows (minus header) have been read so far */
@@ -6406,6 +6424,7 @@ namespace csv {
         void trim_header();
     };
 }
+
 /** @file
  *  Calculates statistics from CSV files
  */
@@ -6457,6 +6476,7 @@ namespace csv {
         void dtype(CSVField&, const size_t&);
 
         void calc();
+        void calc_chunk();
         void calc_worker(const size_t&);
 
         CSVReader reader;
@@ -6510,6 +6530,8 @@ namespace csv {
 
 namespace csv {
     namespace internals {
+        static int DECIMAL_PLACES = 5;
+
         /** to_string() for unsigned integers */
         template<typename T,
             csv::enable_if_t<std::is_unsigned<T>::value, int> = 0>
@@ -6543,12 +6565,51 @@ namespace csv {
             typename T,
             csv::enable_if_t<std::is_floating_point<T>::value, int> = 0
         >
-        inline std::string to_string(T value) {
-	  std::string ret = std::to_string(value);
-	  if(auto pos = ret.find(','); pos != std::string::npos)
-	    ret[pos]='.';
-	  return ret;
+            inline std::string to_string(T value) {
+                std::string result;
+
+                T integral_part;
+                T fractional_part = std::abs(std::modf(value, &integral_part));
+                integral_part = std::abs(integral_part);
+
+                // Integral part
+                if (value < 0) result = "-";
+
+                if (integral_part == 0) {
+                    result = "0";
+                }
+                else {
+                    for (int n_digits = (int)(std::log(integral_part) / std::log(10));
+                         n_digits + 1 > 0; n_digits --) {
+                        int digit = (int)(std::fmod(integral_part, pow10(n_digits + 1)) / pow10(n_digits));
+                        result += (char)('0' + digit);
+                    }
+                }
+
+                // Decimal part
+                result += ".";
+
+                if (fractional_part > 0) {
+                    fractional_part *= (T)(pow10(DECIMAL_PLACES));
+                    for (int n_digits = DECIMAL_PLACES; n_digits > 0; n_digits--) {
+                        int digit = (int)(std::fmod(fractional_part, pow10(n_digits)) / pow10(n_digits - 1));
+                        result += (char)('0' + digit);
+                    }
+                }
+                else {
+                    result += "0";
+                }
+
+                return result;
         }
+    }
+
+    /** Sets how many places after the decimal will be written for floating point numbers
+     *
+     *  @param  precision   Number of decimal places
+     */
+    inline static void set_decimal_places(int precision) {
+        internals::DECIMAL_PLACES = precision;
     }
 
     /** @name CSV Writing */
@@ -6563,6 +6624,9 @@ namespace csv {
      *  @tparam OutputStream The output stream, e.g. `std::ofstream`, `std::stringstream`
      *  @tparam Delim        The delimiter character
      *  @tparam Quote        The quote character
+     *  @tparam Flush        True: flush after every writing function,
+     *                       false: you need to flush explicitly if needed.
+     *                       In both cases the destructor will flush.
      *
      *  @par Hint
      *  Use the aliases csv::CSVWriter<OutputStream> to write CSV
@@ -6575,7 +6639,7 @@ namespace csv {
      *  @par Example w/ std::tuple
      *  @snippet test_write_csv.cpp CSV Writer Tuple Example
      */
-    template<class OutputStream, char Delim, char Quote>
+    template<class OutputStream, char Delim, char Quote, bool Flush>
     class DelimWriter {
     public:
         /** Construct a DelimWriter over the specified output stream
@@ -6583,6 +6647,7 @@ namespace csv {
          *  @param  _out           Stream to write to
          *  @param  _quote_minimal Limit field quoting to only when necessary
         */
+
         DelimWriter(OutputStream& _out, bool _quote_minimal = true)
             : out(_out), quote_minimal(_quote_minimal) {};
 
@@ -6591,6 +6656,13 @@ namespace csv {
          *  @param[out] filename  File to write to
          */
         DelimWriter(const std::string& filename) : DelimWriter(std::ifstream(filename)) {};
+
+        /** Destructor will flush remaining data
+         *
+         */
+        ~DelimWriter() {
+            out.flush();
+        }
 
         /** Format a sequence of strings and write to CSV according to RFC 4180
          *
@@ -6607,7 +6679,7 @@ namespace csv {
                 if (i + 1 != Size) out << Delim;
             }
 
-            out << std::endl;
+            end_out();
             return *this;
         }
 
@@ -6638,8 +6710,15 @@ namespace csv {
                 i++;
             }
 
-            out << std::endl;
+            end_out();
             return *this;
+        }
+
+        /** Flushes the written data
+         *
+         */
+        void flush() {
+            out.flush();
         }
 
     private:
@@ -6680,7 +6759,7 @@ namespace csv {
             bool quote_escape = false;
 
             for (auto ch : in) {
-                if (ch == Quote || ch == Delim) {
+                if (ch == Quote || ch == Delim || ch == '\r' || ch == '\n') {
                     quote_escape = true;
                     break;
                 }
@@ -6689,9 +6768,10 @@ namespace csv {
             if (!quote_escape) {
                 if (quote_minimal) return std::string(in);
                 else {
-                    std::string ret(Quote, 1);
+                    std::string ret(1, Quote);
                     ret += in.data();
                     ret += Quote;
+                    return ret;
                 }
             }
 
@@ -6721,7 +6801,13 @@ namespace csv {
         template<size_t Index = 0, typename... T>
         typename std::enable_if<Index == sizeof...(T), void>::type write_tuple(const std::tuple<T...>& record) {
             (void)record;
-            out << std::endl;
+            end_out();
+        }
+
+        /** Ends a line in 'out' and flushes, if Flush is true.*/
+        void end_out() {
+            out << '\n';
+            IF_CONSTEXPR(Flush) out.flush();
         }
 
         OutputStream & out;
@@ -6735,19 +6821,19 @@ namespace csv {
      *  @note Use `csv::make_csv_writer()` to in instatiate this class over
      *        an actual output stream.
      */
-    template<class OutputStream>
-    using CSVWriter = DelimWriter<OutputStream, ',', '"'>;
+    template<class OutputStream, bool Flush = true>
+    using CSVWriter = DelimWriter<OutputStream, ',', '"', Flush>;
 
     /** Class for writing tab-separated values files
-*
+    *
      *  @sa csv::DelimWriter::write_row()
      *  @sa csv::DelimWriter::operator<<()
      *
      *  @note Use `csv::make_tsv_writer()` to in instatiate this class over
      *        an actual output stream.
      */
-    template<class OutputStream>
-    using TSVWriter = DelimWriter<OutputStream, '\t', '"'>;
+    template<class OutputStream, bool Flush = true>
+    using TSVWriter = DelimWriter<OutputStream, '\t', '"', Flush>;
 
     /** Return a csv::CSVWriter over the output stream */
     template<class OutputStream>
@@ -6755,10 +6841,22 @@ namespace csv {
         return CSVWriter<OutputStream>(out, quote_minimal);
     }
 
+    /** Return a buffered csv::CSVWriter over the output stream (does not auto flush) */
+    template<class OutputStream>
+    inline CSVWriter<OutputStream, false> make_csv_writer_buffered(OutputStream& out, bool quote_minimal=true) {
+        return CSVWriter<OutputStream, false>(out, quote_minimal);
+    }
+
     /** Return a csv::TSVWriter over the output stream */
     template<class OutputStream>
     inline TSVWriter<OutputStream> make_tsv_writer(OutputStream& out, bool quote_minimal=true) {
         return TSVWriter<OutputStream>(out, quote_minimal);
+    }
+
+    /** Return a buffered csv::TSVWriter over the output stream (does not auto flush) */
+    template<class OutputStream>
+    inline TSVWriter<OutputStream, false> make_tsv_writer_buffered(OutputStream& out, bool quote_minimal=true) {
+        return TSVWriter<OutputStream, false>(out, quote_minimal);
     }
     ///@}
 }
@@ -6946,6 +7044,8 @@ namespace csv {
                     if (this->field_length == 0) {
                         quote_escape = true;
                         data_pos++;
+                        if (field_start == UNINITIALIZED_FIELD && data_pos < in.size() && !ws_flag(in[data_pos]))
+                            field_start = (int)(data_pos - current_row_start());
                         break;
                     }
 
@@ -7025,6 +7125,7 @@ namespace csv {
 #endif
     }
 }
+
 
 namespace csv {
     namespace internals {
@@ -7158,8 +7259,9 @@ namespace csv {
             for (size_t i = 0; i < row.size(); i++) {
                 ret << row[i];
                 if (i + 1 < row.size()) ret << delim;
-                else ret << std::endl;
+                else ret << '\n';
             }
+            ret.flush();
 
             return ret.str();
         }
@@ -7175,7 +7277,7 @@ namespace csv {
             auto trim_chars = format.get_trim_chars();
             std::stringstream source(head.data());
             RowCollection rows;
-            
+
             StreamParser<std::stringstream> parser(source, format);
             parser.set_output(rows);
             parser.next();
@@ -7216,7 +7318,7 @@ namespace csv {
             double final_score = 0;
             size_t header_row = 0;
 
-            // Final score is equal to the largest 
+            // Final score is equal to the largest
             // row size times rows of that size
             for (auto& pair : row_tally) {
                 auto row_size = pair.first;
@@ -7250,7 +7352,7 @@ namespace csv {
             for (char cand_delim : delims) {
                 auto result = calculate_score(head, format.delimiter(cand_delim));
 
-                if (result.score > max_score) {
+                if ((size_t)result.score > max_score) {
                     max_score = (size_t)result.score;
                     current_delim = cand_delim;
                     header = result.header;
@@ -7296,7 +7398,7 @@ namespace csv {
      *  \snippet tests/test_read_csv.cpp CSVField Example
      *
      */
-    CSV_INLINE CSVReader::CSVReader(csv::string_view filename, CSVFormat format) {
+	CSV_INLINE CSVReader::CSVReader(csv::string_view filename, CSVFormat format) : _format(format) {
         auto head = internals::get_csv_head(filename);
         using Parser = internals::MmapParser;
 
@@ -7319,7 +7421,7 @@ namespace csv {
     CSV_INLINE CSVFormat CSVReader::get_format() const {
         CSVFormat new_format = this->_format;
 
-        // Since users are normally not allowed to set 
+        // Since users are normally not allowed to set
         // column names and header row simulatenously,
         // we will set the backing variables directly here
         new_format.col_names = this->col_names->get_col_names();
@@ -7350,12 +7452,12 @@ namespace csv {
 
     CSV_INLINE void CSVReader::trim_header() {
         if (!this->header_trimmed) {
-            for (int i = 0; i <= this->_format.header && !this->records.empty(); i++) {
+            for (int i = 0; i <= this->_format.header && !this->records->empty(); i++) {
                 if (i == this->_format.header && this->col_names->empty()) {
-                    this->set_col_names(this->records.pop_front());
+                    this->set_col_names(this->records->pop_front());
                 }
                 else {
-                    this->records.pop_front();
+                    this->records->pop_front();
                 }
             }
 
@@ -7385,9 +7487,9 @@ namespace csv {
      */
     CSV_INLINE bool CSVReader::read_csv(size_t bytes) {
         // Tell read_row() to listen for CSV rows
-        this->records.notify_all();
+        this->records->notify_all();
 
-        this->parser->set_output(this->records);
+        this->parser->set_output(*this->records);
         this->parser->next(bytes);
 
         if (!this->header_trimmed) {
@@ -7395,7 +7497,7 @@ namespace csv {
         }
 
         // Tell read_row() to stop waiting
-        this->records.kill_all();
+        this->records->kill_all();
 
         return true;
     }
@@ -7416,10 +7518,10 @@ namespace csv {
      */
     CSV_INLINE bool CSVReader::read_row(CSVRow &row) {
         while (true) {
-            if (this->records.empty()) {
-                if (this->records.is_waitable())
+            if (this->records->empty()) {
+                if (this->records->is_waitable())
                     // Reading thread is currently active => wait for it to populate records
-                    this->records.wait();
+                    this->records->wait();
                 else if (this->parser->eof())
                     // End of file and no more records
                     return false;
@@ -7431,9 +7533,9 @@ namespace csv {
                     this->read_csv_worker = std::thread(&CSVReader::read_csv, this, internals::ITERATION_CHUNK_SIZE);
                 }
             }
-            else if (this->records.front().size() != this->n_cols &&
+            else if (this->records->front().size() != this->n_cols &&
                 this->_format.variable_column_policy != VariableColumnPolicy::KEEP) {
-                auto errored_row = this->records.pop_front();
+                auto errored_row = this->records->pop_front();
 
                 if (this->_format.variable_column_policy == VariableColumnPolicy::THROW) {
                     if (errored_row.size() < this->n_cols)
@@ -7443,15 +7545,16 @@ namespace csv {
                 }
             }
             else {
-                row = std::move(this->records.pop_front());
+                row = this->records->pop_front();
                 this->_n_rows++;
                 return true;
             }
         }
-    
+
         return false;
     }
 }
+
 /** @file
  *  Defines an input iterator for csv::CSVReader
  */
@@ -7460,15 +7563,15 @@ namespace csv {
 namespace csv {
     /** Return an iterator to the first row in the reader */
     CSV_INLINE CSVReader::iterator CSVReader::begin() {
-        if (this->records.empty()) {
+        if (this->records->empty()) {
             this->read_csv_worker = std::thread(&CSVReader::read_csv, this, internals::ITERATION_CHUNK_SIZE);
             this->read_csv_worker.join();
 
             // Still empty => return end iterator
-            if (this->records.empty()) return this->end();
+            if (this->records->empty()) return this->end();
         }
 
-        CSVReader::iterator ret(this, std::move(this->records.pop_front()));
+        CSVReader::iterator ret(this, this->records->pop_front());
         return ret;
     }
 
@@ -7513,6 +7616,7 @@ namespace csv {
         return temp;
     }
 }
+
 /** @file
  *  Defines the data type used for storing information about a CSV row
  */
@@ -7610,6 +7714,72 @@ namespace csv {
         }
 
         return field_str.substr(0, field.length);
+    }
+
+    CSV_INLINE bool CSVField::try_parse_hex(int& parsedValue) {
+        size_t start = 0, end = 0;
+
+        // Trim out whitespace chars
+        for (; start < this->sv.size() && this->sv[start] == ' '; start++);
+        for (end = start; end < this->sv.size() && this->sv[end] != ' '; end++);
+        
+        unsigned long long int value = 0;
+
+        size_t digits = (end - start);
+        size_t base16_exponent = digits - 1;
+
+        if (digits == 0) return false;
+
+        for (const auto& ch : this->sv.substr(start, digits)) {
+            int digit = 0;
+
+            switch (ch) {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                digit = static_cast<int>(ch - '0');
+                break;
+            case 'a':
+            case 'A':
+                digit = 10;
+                break;
+            case 'b':
+            case 'B':
+                digit = 11;
+                break;
+            case 'c':
+            case 'C':
+                digit = 12;
+                break;
+            case 'd':
+            case 'D':
+                digit = 13;
+                break;
+            case 'e':
+            case 'E':
+                digit = 14;
+                break;
+            case 'f':
+            case 'F':
+                digit = 15;
+                break;
+            default:
+                return false;
+            }
+
+            value += digit * pow(16, base16_exponent);
+            base16_exponent--;
+        }
+
+        parsedValue = value;
+        return true;
     }
 
 #ifdef _MSC_VER
@@ -8043,17 +8213,9 @@ namespace csv {
         return ret;
     }
 
-    CSV_INLINE void CSVStat::calc() {
-        constexpr size_t CALC_CHUNK_SIZE = 5000;
-
-        while (true) {
-            /** Chunk rows */
-            for (auto& row : reader) {
-                if (this->records.size() < CALC_CHUNK_SIZE) {
-                    this->records.push_back(std::move(row));
-                }
-            }
-
+    CSV_INLINE void CSVStat::calc_chunk() {
+        /** Only create stats counters the first time **/
+        if (dtypes.empty()) {
             /** Go through all records and calculate specified statistics */
             for (size_t i = 0; i < this->get_col_names().size(); i++) {
                 dtypes.push_back({});
@@ -8064,18 +8226,34 @@ namespace csv {
                 maxes.push_back(NAN);
                 n.push_back(0);
             }
+        }
 
-            std::vector<std::thread> pool;
+        // Start threads
+        std::vector<std::thread> pool;
+        for (size_t i = 0; i < this->get_col_names().size(); i++)
+            pool.push_back(std::thread(&CSVStat::calc_worker, this, i));
 
-            // Start threads
-            for (size_t i = 0; i < this->get_col_names().size(); i++)
-                pool.push_back(std::thread(&CSVStat::calc_worker, this, i));
+        // Block until done
+        for (auto& th : pool)
+            th.join();
 
-            // Block until done
-            for (auto& th : pool)
-                th.join();
+        this->records.clear();
+    }
 
-            if (reader.eof()) break;
+    CSV_INLINE void CSVStat::calc() {
+        constexpr size_t CALC_CHUNK_SIZE = 5000;
+
+        for (auto& row : reader) {
+            this->records.push_back(std::move(row));
+
+            /** Chunk rows */
+            if (this->records.size() == CALC_CHUNK_SIZE) {
+                calc_chunk();
+            }
+        }
+
+        if (!this->records.empty()) {
+          calc_chunk();
         }
     }
 
