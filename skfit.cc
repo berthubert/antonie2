@@ -5,7 +5,8 @@
 #include <optional>
 #define _USESTDVECTOR_
 #define _USENRERRORCLASS_
-
+#include <fmt/core.h>
+#include <fmt/os.h>
 #include "nr3.h"
 #include "amoeba.h"
 
@@ -44,26 +45,51 @@ REVERSE GC/TA:
 
 void doDump(const auto& g)
 {
-  ofstream os(g.first+"_fit.csv");
-  auto writer = csv::make_csv_writer(os);
-  writer << vector<string>({"pos", "gcskew", "predgcskew",
+  auto out = fmt::output_file(g.first+"_fit.csv");
+
+  vector<string> hdrs({"pos", "gcskew", "predgcskew",
 			    "taskew", "predtaskew",
 			    "sbskew", "predsbskew",
 			    "gc0skew", "predgc0skew",
 			    "gc1skew", "predgc1skew",
 			    "gc2skew", "predgc2skew",
-			    "gcNGskew", "predgcNGskew", "predleading"
+			    "ta0skew", "predta0skew",
+			    "ta1skew", "predta1skew",
+			    "ta2skew", "predta2skew",
+                            
+			    "gcNGskew", "predgcNGskew",
+                            "taNGskew", "predtaNGskew",
+                            "predleading"
     });
+  bool firsthdr=true;
+  for(const auto& h : hdrs) {
+    if(!firsthdr)
+      out.print(",");
+    else
+      firsthdr=false;
+    out.print("{}", h);
+  }
+  out.print("\n");
   for(auto& skp : g.second) {
-    writer << make_tuple(skp.pos,
+    out.print("{}", skp.pos);
+    auto vals= make_tuple(
 			 skp.gc.skew, skp.gc.predskew, 
 			 skp.ta.skew, skp.ta.predskew,
 			 skp.sb.skew, skp.sb.predskew,
 			 skp.gc0.skew, skp.gc0.predskew,
 			 skp.gc1.skew, skp.gc1.predskew,
 			 skp.gc2.skew, skp.gc2.predskew,
-			 skp.gcNG.skew, skp.gcNG.predskew, skp.predleading
-			 );
+			 skp.ta0.skew, skp.ta0.predskew,
+			 skp.ta1.skew, skp.ta1.predskew,
+			 skp.ta2.skew, skp.ta2.predskew,
+ 
+			 skp.gcNG.skew, skp.gcNG.predskew,
+                         skp.taNG.skew, skp.taNG.predskew,
+                         skp.predleading
+                          );
+    std::apply([&out](auto&&... args) {((out.print(",{}", args)), ...);}, vals);
+    out.print("\n");
+               
   }
 }
 
@@ -95,7 +121,7 @@ struct SKPos
     gc0, gc1, gc2,
     ta0, ta1, ta2,
     gcNG, taNG;
-  bool predleading;
+  int predleading;
 };
 
 /* 
@@ -260,8 +286,10 @@ BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKP
     ret.shift = params[2];
     ret.div = params[3];
 
-    ret.rms = sqrt(newRMS) / chromo.size() /getAbsAvg(chromo);
-    cout<<"Done, adjusted RMS: " << ret.rms <<endl;
+    // the chromo.size() is CORRECT here - it represents the number of samples, not the size of the chromosome!
+    // the newRMS is built up out of chromo.size() measurements!
+    ret.rms = sqrt(newRMS/chromo.size())  / getAbsAvg(chromo);
+    cout<<"alpha1 "<<ret.alpha1<<" alpha2 "<<ret.alpha2 <<". Done, adjusted RMS: " << ret.rms <<", raw "<<newRMS  << endl;
     // XXX
     return ret;
 }
@@ -357,11 +385,9 @@ int main(int argc, char **argv)
   }
 
   cout<<"Got "<<chromosomes.size()<<" chromosomes"<<endl;
-  ofstream resos("results.csv");
-  resos<<std::scientific;
-  auto reswriter = csv::make_csv_writer(resos);
-  resos<<std::scientific;
-  reswriter << vector<string>({"name", "flipped", "siz", "gccount", "ngcount", "acounts2", "ccounts2", "gcounts2", "tcounts2", "maxpos",
+  auto resos = fmt::output_file("results.csv");
+
+  vector<string> headers({"name", "flipped", "siz", "gccount", "ngcount", "acounts2", "ccounts2", "gcounts2", "tcounts2", "maxpos",
 			       "alpha1gc", "minpos", "alpha2gc", "shift", "div",
 			       "alpha1ta", "alpha2ta",
 			       "alpha1sb", "alpha2sb",
@@ -380,7 +406,18 @@ int main(int argc, char **argv)
 			       "rmsGC", "rmsTA", "rmsSB",
 			       "rmsGC0", "rmsGC1", "rmsGC2",
 			       "rmsTA0", "rmsTA1", "rmsTA2",
-			       "rmsGCNG", "rmsTANG"});
+                          "rmsGCNG", "rmsTANG"});
+  bool firsthdr=true;
+  for(const auto& h: headers) {
+    if(!firsthdr)
+      resos.print(",{}", h);
+    else {
+      resos.print("{}", h);
+      firsthdr=false;
+    }
+  }
+  resos.print("\n");
+
 
   int counter=0;
   for(auto& g : chromosomes) {
@@ -430,7 +467,7 @@ int main(int argc, char **argv)
 
     //    double alpha = (maxskew - minskew) / (minpos - maxpos);
 
-    //    cout << "GC skew"<<endl;
+    cout << "GC skew"<<endl;
     biases.gc = doAnalysis(gcgetter, g.second);
     cout<<"Shift: "<<biases.gc.shift<<", gc.alpha1: "<<biases.gc.alpha1<<", div: "<<biases.gc.div << endl;
 
@@ -531,8 +568,9 @@ int main(int argc, char **argv)
     biases.tang = doAnalysis(nggetter, g.second, biases.gc.shift, biases.gc.div);
     
     doDump(g);
-
-    reswriter << make_tuple(g.first, flipped, g.second.rbegin()->pos, g.second.rbegin()->gccount, g.second.rbegin()->ngcount,
+    cout<<"Writing out alpha1ta: "<<biases.ta.alpha1<<endl;
+    resos.print("{}", g.first);
+    auto vals=make_tuple((int)flipped, g.second.rbegin()->pos, g.second.rbegin()->gccount, g.second.rbegin()->ngcount,
 			    g.second.rbegin()->acounts2,
 			    g.second.rbegin()->ccounts2,
 			    g.second.rbegin()->gcounts2,
@@ -556,8 +594,8 @@ int main(int argc, char **argv)
 			    biases.gc0.rms, biases.gc1.rms, biases.gc2.rms,
 			    biases.ta0.rms, biases.ta1.rms, biases.ta2.rms,
 			    biases.gcng.rms, biases.tang.rms);
-    resos.flush();
-
+    std::apply([&resos](auto&&... args) {((resos.print(",{}", args)), ...);}, vals);
+    resos.print("\n");
   }
 }
 

@@ -1,7 +1,7 @@
 -include sysdeps/$(shell uname).inc
 
 VERSION=0.1
-CXXFLAGS?=-Wall -O3 -fPIC -I/usr/include/python3.6m -ggdb -I. -Iext -Iext/libmba  -MMD -MP -pthread  $(CXX2014FLAGS) -Wno-strict-aliasing -Iext/nr_c304/code -fconcepts -Wno-reorder # -Wno-unused-local-typedefs 
+CXXFLAGS?=-Wall -O3 -fPIC -I/usr/include/python3.6m -ggdb -I. -Iext -Iext/libmba  -MMD -MP -pthread  $(CXX2014FLAGS) -Wno-strict-aliasing -Iext/nr_c304/code -Iext/fmt-8.0.1/include -fconcepts -Wno-reorder # -Wno-unused-local-typedefs 
 CFLAGS=-Wall -I. -Iext/libmba -O3 -MMD -MP
 LDFLAGS=$(CXX2014FLAGS) -pthread  # -Wl,-Bstatic -lstdc++ -lgcc -lz -Wl,-Bdynamic -static-libgcc -lm -lc
 CHEAT_ARG := $(shell ./update-git-hash-if-necessary)
@@ -89,7 +89,7 @@ gcscan: gcscan.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o genean
 
 
 
-skfit: skfit.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o
+skfit: skfit.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o ext/fmt-8.0.1/src/format.o ext/fmt-8.0.1/src/os.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
 
 
