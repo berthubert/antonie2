@@ -29,15 +29,15 @@ using namespace std;
  *
  * The GFF is used to determine the codon position, or if we are in a gene or not
  *
- * Also reads taxonomies from a fixed location, /home/ahu/git/antonie/taxonomy/new/fullnamelineage.dmp (sorry)
+ * Also reads taxonomies (fullnamelineage.dmp)
  *
  * This code ignores chromosomes smaller than 1 million bp, which mostly rids us of confusing plasmids, viruses etc
  */
 
 int main(int argc, char**argv)
 {
-  if(argc < 2) {
-    cerr<<"Syntax: gcstats reference.fasta"<<endl;
+  if(argc < 3) {
+    cerr<<"Syntax: gcstats fullnamelineage.dmp reference.fasta [reference.fasta...] "<<endl;
     return EXIT_FAILURE;
   }
 
@@ -51,13 +51,13 @@ int main(int argc, char**argv)
   skplot<<endl;
 
 
-  string taxofname="/home/ahu/git/antonie/taxonomy/new/fullnamelineage.dmp";
+  string taxofname(argv[1]);
   cout<<"Reading taxonomies from "<<taxofname<<"... ";
   cout.flush();
   TaxoReader tr(taxofname);
   cout<<" got "<<tr.size()<<" entries"<<endl;
   
-  for(int n=1; n < argc; ++n) {
+  for(int n=2; n < argc; ++n) {
     try {
     ReferenceGenome rg(argv[n]);
   
@@ -77,15 +77,13 @@ int main(int argc, char**argv)
     
     for(const auto& c : rg.getAllChromosomes()) {
       const auto& chr = c.second.chromosome;
-      if(chr.size() < 1000000) {
+      if(chr.size() < 150000) {
 	cout<<c.first<<" too small, "<<chr.size()<<" ntds, skipping"<<endl;
 	continue;
       }
       cout << c.first<<": "<<chr.size() << " ntds ";
       cout<<c.second.fullname<<endl;
 
-
-      
       int aCount{0}, cCount{0}, gCount{0}, tCount{0};
       for(uint64_t s = 0 ; s < chr.size(); ++s) {
 	char n = chr.get(s);
