@@ -42,7 +42,7 @@ int main(int argc, char**argv)
   }
 
   ofstream genomescsv("genomes.csv");
-  genomescsv<<"name;fullname;acount;ccount;gcount;tcount;realm1;realm2;realm3;realm4;realm5\n";
+  genomescsv<<"name;fullname;acount;ccount;gcount;tcount;plasmid;realm1;realm2;realm3;realm4;realm5\n";
   ofstream skplot("skplot.csv");
   skplot<<"name,relpos,abspos,gcskew,taskew,gcskew0,gcskew1,gcskew2,gcskewNG,taskew0,taskew1,taskew2,taskewNG,pospos,gccount,ngcount";
   for(int cpos = 0 ; cpos < 4 ; ++cpos) {
@@ -95,7 +95,8 @@ int main(int argc, char**argv)
 
       vector<string> taxo = tr.get(gar.d_taxonID);
       taxo.resize(6); // so the printing is safe
-      genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<endl;
+      bool plasmid = (c.second.fullname.find("plasmid") != string::npos);
+      genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<endl;
       
       cout<<"A: "<<aCount<<", ";
       cout<<"C: "<<cCount<<", ";
