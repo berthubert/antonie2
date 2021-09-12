@@ -42,7 +42,7 @@ int main(int argc, char**argv)
   }
 
   ofstream genomescsv("genomes.csv");
-  genomescsv<<"name;fullname;acount;ccount;gcount;tcount;plasmid;realm1;realm2;realm3;realm4;realm5\n";
+  genomescsv<<"name;fullname;acount;ccount;gcount;tcount;plasmid;realm1;realm2;realm3;realm4;realm5;protgenecount;stopTAG;stopTAA;stopTGA;stopXXX;startATG;startGTG;startTTG;startXXX;dnaApos"<<endl;
   ofstream skplot("skplot.csv");
   skplot<<"name,relpos,abspos,gcskew,taskew,gcskew0,gcskew1,gcskew2,gcskewNG,taskew0,taskew1,taskew2,taskewNG,pospos,gccount,ngcount";
   for(int cpos = 0 ; cpos < 4 ; ++cpos) {
@@ -85,6 +85,7 @@ int main(int argc, char**argv)
       cout<<c.second.fullname<<endl;
 
       int aCount{0}, cCount{0}, gCount{0}, tCount{0};
+
       for(uint64_t s = 0 ; s < chr.size(); ++s) {
 	char n = chr.get(s);
 	if(n=='A') ++aCount;
@@ -93,10 +94,6 @@ int main(int argc, char**argv)
 	else if(n=='T') ++tCount;
       }
 
-      vector<string> taxo = tr.get(gar.d_taxonID);
-      taxo.resize(6); // so the printing is safe
-      bool plasmid = (c.second.fullname.find("plasmid") != string::npos);
-      genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<endl;
       
       cout<<"A: "<<aCount<<", ";
       cout<<"C: "<<cCount<<", ";
@@ -105,41 +102,98 @@ int main(int argc, char**argv)
       double gc = 1.0*(cCount + gCount)/(aCount + cCount + gCount +tCount);
       cout<<"gc: "<<gc<<endl;
       double rat = 1.0*(cCount + gCount)/(aCount + tCount);
-      double gcskew = 0, taskew=0, skew=0, pospos=0;
+      double gcskew = 0, taskew=0, pospos=0;
       double gcskews[4] = {0,0,0,0};
       double taskews[4] = {0,0,0,0};
       int acounts[4]={}, ccounts[4]={}, gcounts[4]={}, tcounts[4]={};
       int ngcount=0; // positions not in a gene
+
+      int stopTAG=0, stopTAA=0, stopTGA=0, stopXXX=0;
+      int startATG=0, startGTG=0, startTTG=0, startXXX=0;
+      int protgenecount=0;
+      
       GeneAnnotation last;
       last.gene=false;
       unsigned int gccount=0;
+
+      /*
+        Alternate start codons: 83% ATG (3542/4284), 14% (612) GTG, 3% (103) TTG
+       */
+
+      string lastName;
+      int dnaApos=-1;
       for(uint64_t s = 0 ; s < chr.size(); ++s) {
 	unsigned genepos = s+1;
+        // this discovers the edges of genes
 	if(!(last.gene && last.startPos <= genepos && genepos < last.stopPos)) {
 	  last.gene=false;
 	  auto ans= gar.lookup(c.first, genepos);
 	  for(const auto& a: ans) {
-	    if(a.gene==true && (!a.tag.empty() && a.tag[0]=='g')) {
-	      //	      cout<<"At position "<< genepos <<" of "<<c.first<<" we are in gene '"<<a.name<<"' tag '"<<a.tag<<"' which goes from " << a.startPos <<" to "<< a.stopPos <<", strand: "<<a.strand<<". Offset: "<< genepos - a.startPos<<", codon offset: ";
-	      
-	      if(a.strand) { // should be ATG
-		int codonpos=(genepos - a.startPos) % 3;
-		//		cout << codonpos << " ";
-
-		/*
-		if(!codonpos)
-		  cout<<chr.get(s-1)<<" "<<chr.get(s)<<chr.get(s+1)<<chr.get(s+2)<<" "<<chr.get(s+3);
-		cout<<"\n";
-		*/
+	    if(a.gene==true && a.gene_biotype == "protein_coding") {
+              //              cout<<"At position "<< genepos <<" of "<<c.first<<" we are in gene '"<<a.name<<"' which goes from " << a.startPos <<" to "<< a.stopPos <<", strand: "<<a.strand<<". Offset: "<< genepos - a.startPos;
+              if(a.name == lastName)
+                continue;
+              lastName=a.name;
+              if(a.name=="dnaA")
+                dnaApos = a.strand ? a.startPos : a.stopPos;
+              
+	      protgenecount++;
+	      if(a.strand) { // positive sense
+                auto start = chr.getRange(a.startPos-1, 3);
+                //                cout<<" Start codon: "<<start;
+                if(auto as = start.toASCII();   as != "ATG" && as != "GTG" && as != "TTG") { // common start codons
+                  //                  cout<<" !!!";
+                  cout<<"Gene "<<a.name<<" had a weird start codon: "<<start<<endl;
+                  startXXX++;
+                }
+                else {
+                  if(as == "ATG") startATG++;
+                  else if(as == "GTG") startGTG++;
+                  else if(as == "TTG") startTTG++;
+                }
+                auto stop = chr.getRange(a.stopPos -3 , 3);
+                //                cout<<" STOP "<<stop;
+                if(auto as = stop.toASCII();   as != "TAG" && as!= "TAA" && as != "TGA") {
+                  stopXXX++;
+                  cout<<"Gene "<<a.name<<" had a weird stop codon: "<<stop<<endl;
+                  //                  cout<<" ???";
+                }
+                else {
+                  if(as == "TAG") stopTAG++;
+                  else if(as == "TAA") stopTAA++;
+                  else if(as == "TGA") stopTGA++;
+                }
+                //                cout<<"\n";
 	      }
-	      else {
-		int codonpos = (a.stopPos - genepos) % 3;
-		//		cout << codonpos << " ";
-		if(!codonpos) {
-		  // CAT on the positive strand
-		  // cout<<chr.get(s-2)<<chr.get(s-1)<<chr.get(s);
-		}
-		//		cout<<"\n";
+	      else { // negative sense
+                auto start = chr.getRange(a.stopPos-3, 3).getRC();
+                //                cout<<" Start codon: "<<start;
+                if(auto as = start.toASCII();   as != "ATG" && as != "GTG" && as != "TTG") { // common start codons
+                  //                  cout<<" !!!";
+                  cout<<"Gene "<<a.name<<" had a weird start codon: "<<start<<endl;
+                  startXXX++;
+                }
+                else {
+                  if(as == "ATG") startATG++;
+                  else if(as == "GTG") startGTG++;
+                  else if(as == "TTG") startTTG++;
+                }
+
+                auto stop = chr.getRange(a.startPos-1, 3).getRC();
+                //                cout<<" STOP "<< stop;
+                if(auto as = stop.toASCII();   as != "TAG" && as != "TAA" && as != "TGA") { 
+                  //                  cout<<" ???";
+                  cout<<"Gene "<<a.name<<" had a weird stop codon: "<<stop<<endl;
+                  stopXXX++;
+                }
+                else {
+                  if(as == "TAG") stopTAG++;
+                  else if(as == "TAA") stopTAA++;
+                  else if(as == "TGA") stopTGA++;
+                  
+                }
+
+                //                cout<<"\n";
 	      }
 	      last = a;
 	      break;
@@ -198,9 +252,13 @@ int main(int argc, char**argv)
 	  skplot<<endl;
 	}
       }
-      cout<<"skew: "<<skew<<", rat: "<<rat<<endl;
+      cout<<"rat: "<<rat<<endl;
 
-    
+      vector<string> taxo= tr.get(gar.d_taxonID);
+      taxo.resize(6); // so the printing is safe
+      bool plasmid = (c.second.fullname.find("plasmid") != string::npos);
+      genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<";"<<protgenecount<<";"<<stopTAG<<";"<<stopTAA<<";"<<stopTGA<<";"<<stopXXX<<";"<<startATG<<";"<<startGTG<<";"<<startTTG<<";"<<startXXX<<";"<<dnaApos<<endl;
+
     }
     }
     catch(std::exception& e) {
