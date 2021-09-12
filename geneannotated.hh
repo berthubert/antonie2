@@ -14,11 +14,12 @@ struct GeneAnnotation
   boost::flyweight<std::string> id;
   boost::flyweight<std::string> parent;
   boost::flyweight<std::string> type;
+  boost::flyweight<std::string> gene_biotype;
   std::string name;
   bool strand;
   uint64_t startPos;
   uint64_t stopPos;
-  bool gene;
+  bool gene{false};
 };
 
 inline bool operator<(const GeneAnnotation&A, const GeneAnnotation& B)

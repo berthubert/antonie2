@@ -46,7 +46,8 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
       case 0:
         ga.chromosome = p;
         break;
-      case 2:
+        // 1: "RefSeq"
+      case 2: // gene/tRNA/exon
 	ga.type=p;
 	break;
       case 3:
@@ -99,6 +100,10 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
         ga.id = val.second;
       else if(val.first=="Parent")
         ga.parent = val.second;
+      else if(val.first=="gene_biotype")
+        ga.gene_biotype = val.second;
+      else if(val.first=="Name")
+        ga.name = val.second;
     }
 
     if(ga.type =="gene" || ga.type=="CDS" || ga.type=="cds")
@@ -138,6 +143,12 @@ vector<GeneAnnotation> GeneAnnotationReader::lookup(string_view chromo, uint64_t
   for(const auto& res : results) {
     ret.push_back(res.value);
   }
+  // make sure the 'gene' it comes first
+  sort(ret.begin(), ret.end(), [](const auto& a, const auto& b) {
+                                 if(a.type == "gene" && b.type != "gene")
+                                   return true;
+                                 return false;
+                               });
   return ret;
 }
 
