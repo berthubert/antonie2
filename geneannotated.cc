@@ -36,7 +36,8 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
     if(line[0]=='#') {
       continue;
     }
-    const char* p=strtok((char*)line.c_str(), "\t\n");
+    char* saveptr;
+    const char* p=strtok_r((char*)line.c_str(), "\t\n", &saveptr);
     if(!p)
       continue;
     int field=0;
@@ -65,19 +66,19 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
       
       }
       field++;
-    } while((p=strtok(0, "\t\n")));
+    } while((p=strtok_r(0, "\t\n", &saveptr)));
     //    if(ga.type=="repeat_region")
     //  continue;
 
 
     map<string, string> attributes;
-    if((p=strtok((char*)attributeStr.c_str(), ";"))) {
+    if((p=strtok_r((char*)attributeStr.c_str(), ";", &saveptr))) {
       do {
 	const char *e = strchr(p, '=');
 	if(e) {
 	  attributes[string{p,e}]=e+1;
 	}
-      }while((p=strtok(0, ";")));
+      }while((p=strtok_r(0, ";", &saveptr)));
     }
     ga.tag.clear();
     
