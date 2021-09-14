@@ -263,6 +263,7 @@ int main(int argc, char**argv)
            tmpstr<<endl;
 
            codgccsv << tmpstr.str();
+           codgccsv.flush();
            
            /*
            ofstream codoncsv(c.first+"_codons.csv");
