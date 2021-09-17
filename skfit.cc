@@ -301,7 +301,7 @@ int main(int argc, char **argv)
   string fname("skplot.csv");
   if(argc > 1)
     fname=argv[1];
-  cerr<<"Reading skplot.csv from "<<fname<<endl;
+  cerr<<"Reading 'skplot.csv' file from "<<fname<<endl;
   csv::CSVReader reader(fname);
 
   set<string> filter;
