@@ -424,7 +424,7 @@ int main(int argc, char **argv)
     ++counter;
     if(!filter.empty() && !filter.count(g.first))
       continue;
-    cout<<"Start with chromosome "<<g.first<<", "<<counter<<"/"<<chromosomes.size()<<endl;
+    cout<<"Start with chromosome "<<g.first<<" ("<<g.second.rbegin()->pos<<" ntds), "<<counter<<"/"<<chromosomes.size()<<endl;
     //    double minskew = 1e10, maxskew = -1e10;
     int minpos = -1, maxpos = -1;
 
