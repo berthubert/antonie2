@@ -42,7 +42,7 @@ int main(int argc, char**argv)
   }
 
   ofstream genomescsv("genomes.csv");
-  genomescsv<<"name;fullname;acount;ccount;gcount;tcount;plasmid;realm1;realm2;realm3;realm4;realm5;protgenecount;stopTAG;stopTAA;stopTGA;stopXXX;startATG;startGTG;startTTG;startXXX;dnaApos"<<endl;
+  genomescsv<<"name;fullname;acount;ccount;gcount;tcount;plasmid;realm1;realm2;realm3;realm4;realm5;protgenecount;stopTAG;stopTAA;stopTGA;stopXXX;startATG;startGTG;startTTG;startXXX;dnaApos;dnaAsense"<<endl;
   ofstream skplot("skplot.csv");
   skplot<<"name,relpos,abspos,gcskew,taskew,gcskew0,gcskew1,gcskew2,gcskewNG,taskew0,taskew1,taskew2,taskewNG,pospos,gccount,ngcount";
   for(int cpos = 0 ; cpos < 4 ; ++cpos) {
@@ -124,6 +124,7 @@ int main(int argc, char**argv)
 
           string lastName;
           int dnaApos=-1;
+          int dnaAsense = -1;
           for(uint64_t s = 0 ; s < chr.size(); ++s) {
             unsigned genepos = s+1;
             // this discovers the edges of genes
@@ -143,8 +144,10 @@ int main(int argc, char**argv)
                   if(a.name == lastName)
                     continue;
                   lastName=a.name;
-                  if(a.name=="dnaA")
+                  if(a.name=="dnaA") {
                     dnaApos = a.strand ? a.startPos : a.stopPos;
+                    dnaAsense = a.strand;
+                  }
               
                   protgenecount++;
                   if(a.strand) { // positive sense
@@ -272,7 +275,7 @@ int main(int argc, char**argv)
           bool plasmid = (c.second.fullname.find("plasmid") != string::npos);
           {
             std::lock_guard<std::mutex> m(iolock);
-            genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<";"<<protgenecount<<";"<<stopTAG<<";"<<stopTAA<<";"<<stopTGA<<";"<<stopXXX<<";"<<startATG<<";"<<startGTG<<";"<<startTTG<<";"<<startXXX<<";"<<dnaApos<<endl;
+            genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<";"<<protgenecount<<";"<<stopTAG<<";"<<stopTAA<<";"<<stopTGA<<";"<<stopXXX<<";"<<startATG<<";"<<startGTG<<";"<<startTTG<<";"<<startXXX<<";"<<dnaApos<<";"<<dnaAsense<<endl;
           }
 
         }
