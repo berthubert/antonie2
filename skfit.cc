@@ -194,7 +194,7 @@ BiasStats doAnalysis(std::function<SKPos::SkewDeets&(SKPos&)> getter, vector<SKP
                       realpos -= chromolen;
                     
                     // going down
-                    if(realpos > (1.0-div)*chromolen) {
+                    if(realpos > (div)*chromolen) {
                       getter(skp).predskewdiff = -alpha1;
                       cumul -= (skp.pos - prevpos)*alpha1;
                       getter(skp).predskew=cumul;
