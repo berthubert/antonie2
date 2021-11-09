@@ -74,6 +74,9 @@ int main(int argc, char**argv)
   char nucs[]="ACGT";
   char triplet[4];
   triplet[3]=0;
+
+  vector<NucleotideStore> codonnames;
+  
   for(int i=0; i < 4; ++i) {
     triplet[0]=nucs[i];
     for(int j=0; j < 4; ++j) {
@@ -81,9 +84,11 @@ int main(int argc, char**argv)
       for(int k=0; k < 4; ++k) {
 	triplet[2]=nucs[k];
 	chagstats<<","<<triplet;
+        codonnames.push_back(NucleotideStore(string(triplet)));
       }
     }
   }
+  chagstats<<",totalcodons";
   chagstats<<endl;
 
 
@@ -98,8 +103,8 @@ int main(int argc, char**argv)
   codgccsv<<"name;ggcfrac;cgcfrac;ttafrac;atafrac;gfrac;cfrac;tfrac;afrac;leadafrac;leadcfrac;leadgfrac;leadtfrac;lagafrac;lagcfrac;laggfrac;lagtfrac"<<endl;
 
   std::atomic<int> n=1;
-
-  auto doFunc=[&argc, &argv, &n, &results, &codgccsv]() {
+  std::mutex iolock;
+  auto doFunc=[&argc, &argv, &n, &results, &iolock, &codonnames, &chagstats, &codgccsv]() {
      int codcount[4][4][4]={};
      for(int j = n++; j < argc; j = n++) {
        try {
@@ -264,6 +269,19 @@ int main(int argc, char**argv)
 
            codgccsv << tmpstr.str();
            codgccsv.flush();
+
+           {
+             std::lock_guard<std::mutex> m(iolock);
+             chagstats<<c.first;
+             unsigned int total=0;
+             for(const auto& c: codonnames) {
+               unsigned int cod=codons[c]+anticodons[c];
+               chagstats<<','<<cod;
+               total += cod;
+             }
+             chagstats<<','<<total;
+             chagstats<<'\n';
+           }
            
            /*
            ofstream codoncsv(c.first+"_codons.csv");
