@@ -76,7 +76,7 @@ int main(int argc, char**argv)
     
       for(const auto& c : rg.getAllChromosomes()) {
 	const auto& chr = c.second.chromosome;
-	if(chr.size() < 1000000) {
+	if(chr.size() < 150000) {
 	  cout<<c.first<<" too small, "<<chr.size()<<" ntds, skipping"<<endl;
 	  continue;
 	}
