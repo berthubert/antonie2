@@ -7,7 +7,7 @@ LDFLAGS=$(CXX2014FLAGS) -pthread  # -Wl,-Bstatic -lstdc++ -lgcc -lz -Wl,-Bdynami
 CHEAT_ARG := $(shell ./update-git-hash-if-necessary)
 
 SHIPPROGRAMS=antonie 16ssearcher stitcher  fqgrep pfqgrep genex
-PROGRAMS=$(SHIPPROGRAMS) digisplice gffedit gfflookup nwunsch fogsaa gtfreader cor2 correlo gcstats skfit gcscan chagstats genehisto\
+PROGRAMS=$(SHIPPROGRAMS) digisplice gffedit gfflookup gfftool nwunsch fogsaa gtfreader cor2 correlo gcstats hpcount skfit gcscan chagstats genehisto\
 	charsample chromopic
 
 ifeq ($(CC),clang)
@@ -69,6 +69,9 @@ correlo: correlo.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o
 gcstats: gcstats.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
 
+hpcount: hpcount.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
 chagstats: chagstats.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
 
@@ -92,7 +95,6 @@ gcscan: gcscan.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o genean
 skfit: skfit.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o ext/fmt-8.0.1/src/format.o ext/fmt-8.0.1/src/os.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
 
-
 cor2: cor2.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
 
@@ -102,6 +104,10 @@ gffedit: gffedit.o refgenome.o fastq.o dnamisc.o zstuff.o misc.o hash.o
 
 gfflookup: gfflookup.o geneannotated.o genbankparser.o refgenome2.o nucstore.o fastq.o dnamisc.o zstuff.o misc.o hash.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -o $@
+
+gfftool: gfftool.o geneannotated.o genbankparser.o refgenome2.o nucstore.o fastq.o dnamisc.o zstuff.o misc.o hash.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -o $@
+
 
 gtfreader: gtfreader.o geneannotated.o genbankparser.o refgenome2.o nucstore.o fastq.o dnamisc.o zstuff.o misc.o hash.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -o $@
