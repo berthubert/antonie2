@@ -135,6 +135,15 @@ vector<GeneAnnotation> GeneAnnotationReader::getAll(string_view chromo)
     });
   return ret;
 }
+size_t GeneAnnotationReader::countAll(string_view chromo) const
+{
+  size_t ret=0;
+  if(auto iter = d_gas.find((string)chromo); iter != d_gas.end())
+    iter->second.visit_all([&ret](const auto& i) {
+                                    ++ret;
+    });
+  return ret;
+}
 
 vector<GeneAnnotation> GeneAnnotationReader::lookup(string_view chromo, uint64_t pos1)
 {

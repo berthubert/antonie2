@@ -36,11 +36,12 @@ public:
   std::vector<GeneAnnotation> lookup(std::string_view chromosome, uint64_t pos1, uint64_t pos2); //!< Get all annotations for pos
 
   std::vector<GeneAnnotation> getAll(std::string_view chromosome);
+  size_t countAll(std::string_view chromosome) const;
   uint64_t size() const
   {
     size_t ret{0};
-    //    for(const auto& ga : d_gas)
-      //      ret += ga.second.size();
+    for(const auto& ga : d_gas)
+      ret += countAll(ga.first);
     return ret;
   } //!< Number of annotations known
 
