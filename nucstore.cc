@@ -15,6 +15,7 @@ NucleotideStore NucleotideStore::getRange(size_t pos, size_t len) const
   return ret;
 }
 
+// nwunsch
 std::vector<NucleotideStore::Delta> NucleotideStore::getDelta(const NucleotideStore& b, double mispen, double gappen, double skwpen) const
 {
   const NucleotideStore& a=*this;

@@ -7,8 +7,8 @@ LDFLAGS=$(CXX2014FLAGS) -pthread  # -Wl,-Bstatic -lstdc++ -lgcc -lz -Wl,-Bdynami
 CHEAT_ARG := $(shell ./update-git-hash-if-necessary)
 
 SHIPPROGRAMS=antonie 16ssearcher stitcher  fqgrep pfqgrep genex
-PROGRAMS=$(SHIPPROGRAMS) digisplice gffedit gfflookup gfftool nwunsch fogsaa gtfreader cor2 correlo gcstats hpcount skfit gcscan chagstats genehisto\
-	charsample chromopic
+PROGRAMS=$(SHIPPROGRAMS) digisplice gffedit gfflookup gfftool nwunsch fogsaa gtfreader cor2 correlo gcstats resscan hpcount skfit gcscan chagstats cpgstats genehisto\
+	charsample chromopic exoexplore cluster simsearch fagrep
 
 ifeq ($(CC),clang)
         CXXFLAGS+=-ftemplate-depth=1000
@@ -69,11 +69,25 @@ correlo: correlo.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o
 gcstats: gcstats.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
 
+resscan: resscan.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+
 hpcount: hpcount.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
 
 chagstats: chagstats.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+cpgstats: cpgstats.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+simsearch: simsearch.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
+fagrep: fagrep.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
+
 
 genehisto: genehisto.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o geneannotated.o taxoreader.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -pthread -lbz2 -o $@
@@ -101,6 +115,13 @@ cor2: cor2.o dnamisc.o zstuff.o misc.o hash.o nucstore.o refgenome2.o
 
 gffedit: gffedit.o refgenome.o fastq.o dnamisc.o zstuff.o misc.o hash.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -o $@
+
+exoexplore: exoexplore.o refgenome.o fastq.o dnamisc.o refgenome2.o genbankparser.o geneannotated.o nucstore.o zstuff.o misc.o hash.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -o $@
+
+cluster: cluster.o refgenome.o fastq.o dnamisc.o refgenome2.o genbankparser.o geneannotated.o nucstore.o zstuff.o misc.o hash.o
+	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -o $@
+
 
 gfflookup: gfflookup.o geneannotated.o genbankparser.o refgenome2.o nucstore.o fastq.o dnamisc.o zstuff.o misc.o hash.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -o $@

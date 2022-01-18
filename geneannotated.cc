@@ -105,6 +105,8 @@ GeneAnnotationReader::GeneAnnotationReader(const std::string& fname)
         ga.gene_biotype = val.second;
       else if(val.first=="Name")
         ga.name = val.second;
+      else if(val.first=="gene" && ga.type=="exon")
+        ga.enclosing_gene = val.second;
     }
 
     if(ga.type =="gene" || ga.type=="CDS" || ga.type=="cds")

@@ -15,6 +15,7 @@ struct GeneAnnotation
   boost::flyweight<std::string> parent;
   boost::flyweight<std::string> type;
   boost::flyweight<std::string> gene_biotype;
+  boost::flyweight<std::string> enclosing_gene;
   std::string name;
   bool strand;
   uint64_t startPos;

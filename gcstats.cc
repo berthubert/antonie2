@@ -31,7 +31,7 @@ using namespace std;
  *
  * Also reads taxonomies (fullnamelineage.dmp)
  *
- * This code ignores chromosomes smaller than 1 million bp, which mostly rids us of confusing plasmids, viruses etc
+ * This code ignores chromosomes smaller than x
  */
 
 int main(int argc, char**argv)
@@ -42,7 +42,7 @@ int main(int argc, char**argv)
   }
 
   ofstream genomescsv("genomes.csv");
-  genomescsv<<"name;fullname;acount;ccount;gcount;tcount;plasmid;realm1;realm2;realm3;realm4;realm5;protgenecount;stopTAG;stopTAA;stopTGA;stopXXX;startATG;startGTG;startTTG;startXXX;dnaApos;dnaAsense"<<endl;
+  genomescsv<<"name;fullname;acount;ccount;gcount;tcount;plasmid;taxonid;realm1;realm2;realm3;realm4;realm5;protgenecount;stopTAG;stopTAA;stopTGA;stopXXX;startATG;startGTG;startTTG;startXXX;dnaApos;dnaAsense"<<endl;
   ofstream skplot("skplot.csv");
   skplot<<"name,relpos,abspos,gcskew,taskew,gcskew0,gcskew1,gcskew2,gcskewNG,taskew0,taskew1,taskew2,taskewNG,pospos,gccount,ngcount";
   for(int cpos = 0 ; cpos < 4 ; ++cpos) {
@@ -275,7 +275,8 @@ int main(int argc, char**argv)
           bool plasmid = (c.second.fullname.find("plasmid") != string::npos);
           {
             std::lock_guard<std::mutex> m(iolock);
-            genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<";"<<protgenecount<<";"<<stopTAG<<";"<<stopTAA<<";"<<stopTGA<<";"<<stopXXX<<";"<<startATG<<";"<<startGTG<<";"<<startTTG<<";"<<startXXX<<";"<<dnaApos<<";"<<dnaAsense<<endl;
+            genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";";
+            genomescsv<<gar.d_taxonID<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<";"<<protgenecount<<";"<<stopTAG<<";"<<stopTAA<<";"<<stopTGA<<";"<<stopXXX<<";"<<startATG<<";"<<startGTG<<";"<<startTTG<<";"<<startXXX<<";"<<dnaApos<<";"<<dnaAsense<<endl;
           }
 
         }
