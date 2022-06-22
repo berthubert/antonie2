@@ -275,7 +275,7 @@ int main(int argc, char**argv)
           bool plasmid = (c.second.fullname.find("plasmid") != string::npos);
           {
             std::lock_guard<std::mutex> m(iolock);
-            genomescsv<<c.first<<";"<<c.second.fullname<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";";
+            genomescsv<<c.first<<";"<<boost::replace_all_copy(c.second.fullname, ";", ",")<<";"<<aCount<<";"<<cCount<<";"<<gCount<<";"<<tCount<<";"<<plasmid<<";";
             genomescsv<<gar.d_taxonID<<";"<<taxo[1]<<";"<<taxo[2]<<";"<<taxo[3]<<";"<<taxo[4]<<";"<<taxo[5]<<";"<<protgenecount<<";"<<stopTAG<<";"<<stopTAA<<";"<<stopTGA<<";"<<stopXXX<<";"<<startATG<<";"<<startGTG<<";"<<startTTG<<";"<<startXXX<<";"<<dnaApos<<";"<<dnaAsense<<endl;
           }
 
