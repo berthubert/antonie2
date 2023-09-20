@@ -101,7 +101,7 @@ a single file for Mac, Linux and Windows platforms.
 
 To compile, get a recent C++ compiler, and run 'make':
 
-	$ git clone git@github.com:beaumontlab/antonie.git
+	$ git clone git@github.com:berthubert/antonie2.git
 	$ cd antonie
 	$ make
 
