@@ -55,11 +55,13 @@ int main(int argc, char**argv)
   }
   chagstats<<endl;
 
-  int ngramlen=6;
+  const int ngramlen=7;
   char ngram[ngramlen+1];
   ngram[ngramlen]=0;
   
-  map<string, int64_t> ngramcount;  
+  map<string, int64_t> ngramcount;
+  visitAllNgrams([&ngramcount](const auto& str) { ngramcount[str]=0; }, ngramlen );
+  
   for(int n=1; n < argc; ++n) {
     try {
       ReferenceGenome rg(argv[n]);
