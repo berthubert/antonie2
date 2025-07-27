@@ -1,5 +1,9 @@
 #include <boost/test/unit_test.hpp>
 #include "dnamisc.hh"
+#include "misc.hh"
+#include <set>
+using namespace std;
+
 BOOST_AUTO_TEST_SUITE(misc_hh)
 
 BOOST_AUTO_TEST_CASE(test_kmerMapper) {
@@ -15,6 +19,31 @@ BOOST_AUTO_TEST_CASE(test_kmerMapper) {
 
   BOOST_CHECK_EQUAL(DNAToAminoAcid("GCC"), 'A');
   BOOST_CHECK_EQUAL(AminoAcidName('A'), "Alanine");
+}
+
+BOOST_AUTO_TEST_CASE(test_visitAllNgrams) {
+  set<string> all;
+  auto func = [&all](const std::string& ngram) {
+    all.insert(ngram);
+  };
+  visitAllNgrams(func, 3);
+  BOOST_CHECK_EQUAL(all.size(), 64);
+  all.clear();
+  visitAllNgrams(func, 1);
+  BOOST_CHECK_EQUAL(all.size(), 4);
+  BOOST_CHECK_EQUAL(all.count("A"), 1);
+  BOOST_CHECK_EQUAL(all.count("C"), 1);
+  BOOST_CHECK_EQUAL(all.count("G"), 1);
+  BOOST_CHECK_EQUAL(all.count("T"), 1);
+
+  all.clear();
+  visitAllNgrams(func, 6);
+  BOOST_CHECK_EQUAL(all.size(), 4096);
+  BOOST_CHECK_EQUAL(all.count("AAACCC"), 1);
+  BOOST_CHECK_EQUAL(all.count("TTTTTT"), 1);
+
+  
+  
 }
 
 BOOST_AUTO_TEST_SUITE_END()
