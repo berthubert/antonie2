@@ -6,6 +6,7 @@ using namespace std;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <boost/lexical_cast.hpp>
+#include <fstream>
 
 //! read a line of text from a FILE* to a std::string, returns false on 'no data'
 bool stringfgets(FILE* fp, std::string* line)
@@ -116,4 +117,39 @@ string compilerVersion()
 #else  // add other compilers here 
   return string("Unknown compiler");
 #endif
+}
+
+// blah 1.fna @file-with-more-fnas
+// expands this with the contents of 'file-with-more-fnas', one per line
+vector<string> expandArguments(int argc, char** argv)
+{
+  vector<string> todo;
+  for(int n=0; n < argc; ++n) {
+    if(argv[n][0]=='@') {
+      ifstream ifs(argv[n]+1);
+      string fname;
+      while(getline(ifs, fname)) {
+	if(!fname.empty() && fname[fname.size()-1]=='\n')
+	  fname.resize(fname.size()-1);
+	todo.push_back(fname);
+      }
+    }
+    else todo.push_back(argv[n]);
+  }
+
+  return todo;
+}
+
+
+void visitAllNgrams(std::function<void(const std::string&)> exec, unsigned int chars, std::string start)
+{
+  if(!chars) {
+    exec(start);
+    return;
+  }
+  --chars;
+  visitAllNgrams(exec, chars, start+"A");
+  visitAllNgrams(exec, chars, start+"C");
+  visitAllNgrams(exec, chars, start+"G");
+  visitAllNgrams(exec, chars, start+"T");
 }

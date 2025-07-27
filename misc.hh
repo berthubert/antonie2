@@ -3,6 +3,8 @@
 #include <string>
 #include <stdint.h>
 #include <zlib.h>
+#include <vector>
+#include <functional>
 
 void chomp(char* line);
 char* sfgets(char* p, int num, FILE* fp);
@@ -50,3 +52,6 @@ inline double variance(const VarMeanEstimator& vme)
 
 std::string compilerVersion();
 void reverseNucleotides(std::string* nucleotides);
+
+std::vector<std::string> expandArguments(int argc, char** argv);
+void visitAllNgrams(std::function<void(const std::string&)> exec, unsigned int chars, std::string start="");
