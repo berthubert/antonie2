@@ -52,7 +52,7 @@ libbridge.so: bridge.o
 
 
 invert: invert.o misc.o
-	$(CXX) $(LDFLAGS) $(STATICFLAGS) $^ -o $@
+	$(CXX) $(LDFLAGS) $(STATICFLAGS) $^ -lz -o $@
 
 fqgrep: fqgrep.o misc.o fastq.o dnamisc.o zstuff.o hash.o
 	$(CXX) $(LDFLAGS) $^ -lz $(STATICFLAGS) -o $@
