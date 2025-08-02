@@ -97,8 +97,23 @@ BOOST_AUTO_TEST_CASE(test_nucstore_comp) {
 
   BOOST_CHECK_LT(NucleotideStore("AACC"),
 		 NucleotideStore("AAGG"));
+}
 
-  
+BOOST_AUTO_TEST_CASE(test_canonicalpalindrome) {
+  NucleotideStore a("ACT");
+  BOOST_CHECK(a.isCanonical());
+  NucleotideStore a1("AC"), b1("GT");
+  BOOST_CHECK(!a1.isDNAPalindrome());
+  BOOST_CHECK(!a1.isDNAPalindrome());
+  BOOST_CHECK(a1.getRC() == b1);
+
+  BOOST_CHECK(!a.isDNAPalindrome());
+  NucleotideStore p1("CCCGGG"), p2("CG");
+  BOOST_CHECK(p1.isDNAPalindrome());
+  BOOST_CHECK(p2.isDNAPalindrome());
+
+  NucleotideStore e;
+  BOOST_CHECK(!e.isDNAPalindrome());
   
 }
 

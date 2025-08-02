@@ -88,20 +88,25 @@ std::vector<NucleotideStore::Delta> NucleotideStore::getDelta(const NucleotideSt
   return ret;
 }
 
+static char rcnuc(char c)
+{
+  if(c=='C')
+    c='G';
+  else if(c=='G')
+    c='C';
+  else if(c=='A')
+    c='T';
+  else if(c=='T')
+    c='A';
+  return c;
+}
+
 NucleotideStore NucleotideStore::getRC() const
 {
   NucleotideStore ret;
   char c;
   for(size_t pos=size(); pos; --pos) {
-    c=get(pos-1);
-    if(c=='C')
-      c='G';
-    else if(c=='G')
-      c='C';
-    else if(c=='A')
-      c='T';
-    else if(c=='T')
-      c='A';
+    c=rcnuc(get(pos-1));
     ret.append(c); // C -> G, A->t
   }
   return ret;
@@ -125,6 +130,17 @@ size_t NucleotideStore::fuzOverlap(const NucleotideStore& rhs, int ratio) const
   return pos;
 }
 
+bool NucleotideStore::isDNAPalindrome() const
+{
+  if(!size() || size() % 2)
+    return false;
+  size_t halflen = size()/2;
+  for(size_t pos = 0, epos=size()-1; pos < halflen; ++pos, --epos) {
+    if(get(pos) != rcnuc(get(epos)))
+      return false;
+  }
+  return true;
+}
 
 bool getBit(uint8_t c, uint8_t bit)
 {

@@ -81,6 +81,8 @@ public:
   {
     return (*this < getRC());
   }
+  bool isDNAPalindrome() const;
+
   bool operator==(const NucleotideStore& rhs) const
   {
     return d_storage == rhs.d_storage && bitpos == rhs.bitpos && d_curval == rhs.d_curval;
