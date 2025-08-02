@@ -3,6 +3,8 @@
 #include "fastq.hh"
 using namespace std;
 
+// greps through fastq files, also matching reverse complement
+
 int main(int argc, char**argv)
 {
   string search(argv[1]);
